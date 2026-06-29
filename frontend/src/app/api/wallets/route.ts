@@ -20,7 +20,6 @@ export async function POST(request: Request) {
         address: validated.address,
         chain: validated.chain,
         label: validated.label,
-        userId: "dev-user", // Placeholder until auth
       },
     });
 

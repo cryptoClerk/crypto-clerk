@@ -15,7 +15,6 @@ model User {
   logoUrl         String?
   plan            String      @default("free") // free, pro, business
   createdAt       DateTime    @default(now())
-  wallets         Wallet[]
   receipts        Receipt[]
   statements      Statement[]
   invoices        Invoice[]
@@ -27,8 +26,6 @@ model Wallet {
   address   String
   chain     String   // ethereum, polygon, bsc, etc.
   label     String?  // "Main Wallet", "DAO Payments"
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
 }
 
