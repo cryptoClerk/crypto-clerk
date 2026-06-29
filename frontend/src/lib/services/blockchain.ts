@@ -11,10 +11,39 @@ export interface BlockchainProvider {
   getChain(): string;
 }
 
+export type SupportedChain = "ethereum" | "polygon" | "bsc" | "arbitrum" | "optimism";
+
+export const SUPPORTED_CHAINS: SupportedChain[] = [
+  "ethereum",
+  "polygon",
+  "bsc",
+  "arbitrum",
+  "optimism",
+];
+
+export const CHAIN_NAMES: Record<string, string> = {
+  ethereum: "Ethereum",
+  polygon: "Polygon",
+  bsc: "BSC",
+  arbitrum: "Arbitrum",
+  optimism: "Optimism",
+};
+
+/**
+ * Auto-detect chain from transaction hash format
+ * All EVM chains use the same tx hash format (0x + 64 hex chars)
+ * So we default to Ethereum and let user override
+ */
+export function detectChainFromTxHash(_hash: string): SupportedChain {
+  // All EVM chains have same tx hash format
+  // Could potentially use chain-specific APIs if we had a registry
+  return "ethereum";
+}
+
 /**
  * MOCK PROVIDER
- * 
- * TODO: Replace with EtherscanProvider when you get API keys.
+ *
+ * TODO: Replace with real Etherscan API when you get API keys.
  */
 export class MockProvider implements BlockchainProvider {
   private chain: string;
@@ -48,7 +77,7 @@ export class MockProvider implements BlockchainProvider {
 
 /**
  * REAL PROVIDER (stub)
- * 
+ *
  * TODO: Implement with actual Etherscan API calls.
  * Requires: ETHERSCAN_API_KEY env variable.
  */
