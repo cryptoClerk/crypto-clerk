@@ -9,3 +9,5 @@ export function getProvider() {
 export function getProviderForChain(chain: string) {
   return createProvider(chain);
 }
+
+export { createProvider };
