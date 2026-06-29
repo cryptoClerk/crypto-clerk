@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id              String      @id @default(uuid())
+  email           String      @unique
+  name            String?
+  businessName    String?
+  businessAddress String?
+  logoUrl         String?
+  plan            String      @default("free") // free, pro, business
+  createdAt       DateTime    @default(now())
+  wallets         Wallet[]
+  receipts        Receipt[]
+  statements      Statement[]
+  invoices        Invoice[]
+  apiKeys         ApiKey[]
+}
+
+model Wallet {
+  id        String   @id @default(uuid())
+  address   String
+  chain     String   // ethereum, polygon, bsc, etc.
+  label     String?  // "Main Wallet", "DAO Payments"
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Receipt {
+  id          String   @id @default(uuid())
+  txHash      String
+  chain       String
+  fromAddress String
+  toAddress   String
+  amount      String   // store as string for precision
+  token       String   // USDC, USDT, DAI, ETH
+  usdValue    String?  // store as string for precision
+  clientName  String
+  description String
+  date        DateTime
+  pdfUrl      String?
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Statement {
+  id          String   @id @default(uuid())
+  startDate   DateTime
+  endDate     DateTime
+  walletIds   String   // comma-separated wallet IDs (JSON string for SQLite)
+  pdfUrl      String?
+  csvUrl      String?
+  totalIncome String?  // store as string for precision
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Invoice {
+  id              String   @id @default(uuid())
+  invoiceNumber   String   @unique
+  clientName      String
+  clientEmail     String?
+  amount          String   // store as string for precision
+  token           String
+  dueDate         DateTime?
+  status          String   @default("pending") // pending, paid, overdue
+  paymentTxHash   String?
+  pdfUrl          String?
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  createdAt       DateTime @default(now())
+}
+
+model ApiKey {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  name      String   // "Production", "Development"
+  lastUsed  DateTime?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
