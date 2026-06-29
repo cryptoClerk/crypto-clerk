@@ -102,7 +102,8 @@
 - [ ] **2.5** Statement PDF template
   - [ ] Bank-style layout: header, date range, wallet list, transaction table, totals
   - [ ] Columns: Date, From/Client, Description, Token Amount, USD Value, Running Balance
-  - [ ] Starting/ending balance
+  - [ ] Starting/ending balance (single combined total across all wallets)
+  - [ ] Option: per-wallet breakdown page for accountants
 - [ ] **2.6** CSV export
   - [ ] Generate CSV from same data as PDF
   - [ ] Columns: Date, Tx Hash, From, To, Token, Amount, USD Value, Category, Client Name
