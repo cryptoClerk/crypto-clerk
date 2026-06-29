@@ -1,13 +1,30 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createProvider, detectChainFromTxHash, SupportedChain, SUPPORTED_CHAINS, CHAIN_NAMES } from "@/lib/services/blockchain";
+import { checkRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
+
+// Ethereum tx hash validation
+const isValidTxHash = (hash: string) => /^0x[a-fA-F0-9]{64}$/.test(hash);
 
 const fetchSchema = z.object({
-  txHash: z.string().min(1),
+  txHash: z.string().min(1).refine(isValidTxHash, {
+    message: "Invalid transaction hash format. Must be 0x followed by 64 hex characters.",
+  }),
   chain: z.enum(SUPPORTED_CHAINS as [string, ...string[]]).optional(),
 });
 
 export async function POST(request: Request) {
+  // Rate limiting
+  const ip = request.headers.get("x-forwarded-for") || "unknown";
+  const rateLimit = checkRateLimit(`tx-fetch:${ip}`, { maxRequests: 30, windowMs: 60 * 1000 });
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded. Please try again later." },
+      { status: 429, headers: getRateLimitHeaders(rateLimit) }
+    );
+  }
+
   try {
     const body = await request.json();
     const validated = fetchSchema.parse(body);
@@ -20,7 +37,7 @@ export async function POST(request: Request) {
     if (!tx) {
       return NextResponse.json(
         { error: "Transaction not found", errorType: "NOT_FOUND" },
-        { status: 404 }
+        { status: 404, headers: getRateLimitHeaders(rateLimit) }
       );
     }
 
@@ -31,7 +48,7 @@ export async function POST(request: Request) {
     if (!transfer) {
       return NextResponse.json(
         { error: "No token transfer found in this transaction. Make sure it's an ERC-20 transfer (USDC, USDT, DAI, etc.)", errorType: "NOT_TOKEN_TRANSFER" },
-        { status: 404 }
+        { status: 404, headers: getRateLimitHeaders(rateLimit) }
       );
     }
 
@@ -54,15 +71,15 @@ export async function POST(request: Request) {
         gasUsed: transfer.gasUsed,
         gasPrice: transfer.gasPrice,
       },
-    });
+    }, { headers: getRateLimitHeaders(rateLimit) });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.issues }, { status: 400 });
+      return NextResponse.json({ error: error.issues }, { status: 400, headers: getRateLimitHeaders(rateLimit) });
     }
     console.error("Transaction fetch error:", error);
     return NextResponse.json(
       { error: "Failed to fetch transaction", errorType: "FETCH_ERROR" },
-      { status: 500 }
+      { status: 500, headers: getRateLimitHeaders(rateLimit) }
     );
   }
 }
