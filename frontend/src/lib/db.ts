@@ -1,6 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 
+// Validate required environment variables at startup
+if (!process.env.DATABASE_URL) {
+  console.warn("WARNING: DATABASE_URL not set. Using default SQLite database.");
+}
+
 const globalForPrisma = global as unknown as {
   prisma: PrismaClient;
 };

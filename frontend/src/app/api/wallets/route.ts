@@ -2,8 +2,13 @@ import { prisma } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+// Ethereum address validation regex
+const isValidAddress = (addr: string) => /^0x[a-fA-F0-9]{40}$/.test(addr);
+
 const walletSchema = z.object({
-  address: z.string().min(1),
+  address: z.string().min(1).refine(isValidAddress, {
+    message: "Invalid Ethereum address format. Must be 0x followed by 40 hex characters.",
+  }),
   chain: z.string().min(1),
   label: z.string().optional(),
 });
@@ -17,7 +22,7 @@ export async function POST(request: Request) {
     // TODO: Link to authenticated user when auth is implemented
     const wallet = await prisma.wallet.create({
       data: {
-        address: validated.address,
+        address: validated.address.toLowerCase(), // Normalize to lowercase
         chain: validated.chain,
         label: validated.label,
       },

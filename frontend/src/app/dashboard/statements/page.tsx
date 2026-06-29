@@ -172,6 +172,14 @@ export default function StatementsPage() {
   const handleExportCSV = () => {
     if (!statement) return;
 
+    const escapeCSV = (field: string) => {
+      // If field contains comma, quote, or newline, wrap in quotes and escape existing quotes
+      if (/[\",\n]/.test(field)) {
+        return `"${field.replace(/"/g, '""')}"`;
+      }
+      return field;
+    };
+
     const headers = ['Date', 'Transaction Hash', 'From', 'To', 'Token', 'Amount', 'USD Value', 'Wallet'];
     const rows = statement.transactions.map((t) => [
       new Date(t.date).toISOString(),
@@ -184,7 +192,11 @@ export default function StatementsPage() {
       t.walletAddress,
     ]);
 
-    const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const csv = [
+      headers.map(escapeCSV).join(','), 
+      ...rows.map((r) => r.map(escapeCSV).join(','))
+    ].join('\n');
+    
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -192,8 +204,12 @@ export default function StatementsPage() {
     a.download = `statement-${datePreset}-${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    
+    // Delay revoke to ensure download starts
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
   };
 
   const formatAddress = (addr: string) => {

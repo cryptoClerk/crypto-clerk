@@ -38,20 +38,13 @@ interface ReceiptData extends TransactionData {
   createdAt: string;
 }
 
+interface ReceiptCount {
+  count: number;
+  limit: number;
+  remaining: number;
+}
+
 const FREE_TIER_LIMIT = 5;
-const STORAGE_KEY = 'cryptobooks_receipt_count';
-
-function getReceiptCount(): number {
-  if (typeof window === 'undefined') return 0;
-  const count = localStorage.getItem(STORAGE_KEY);
-  return count ? parseInt(count, 10) : 0;
-}
-
-function incrementReceiptCount(): void {
-  if (typeof window === 'undefined') return;
-  const count = getReceiptCount();
-  localStorage.setItem(STORAGE_KEY, (count + 1).toString());
-}
 
 export default function ReceiptGenerator() {
   const [txHash, setTxHash] = useState('');
@@ -64,13 +57,29 @@ export default function ReceiptGenerator() {
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [transactionData, setTransactionData] = useState<TransactionData | null>(null);
   const [error, setError] = useState('');
-  const [receiptCount, setReceiptCount] = useState(0);
+  const [receiptCount, setReceiptCount] = useState<ReceiptCount>({ count: 0, limit: FREE_TIER_LIMIT, remaining: FREE_TIER_LIMIT });
   const [showLimitWarning, setShowLimitWarning] = useState(false);
   const [generatingPDF, setGeneratingPDF] = useState(false);
 
-  useEffect(() => {
-    setReceiptCount(getReceiptCount());
+  const fetchReceiptCount = useCallback(async () => {
+    try {
+      const res = await fetch('/api/receipts');
+      const data = await res.json();
+      if (res.ok && data.count !== undefined) {
+        setReceiptCount({
+          count: data.count,
+          limit: data.limit,
+          remaining: data.remaining,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch receipt count:', err);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchReceiptCount();
+  }, [fetchReceiptCount]);
 
   const handleFetchTransaction = useCallback(async () => {
     if (!txHash.trim()) {
@@ -116,8 +125,7 @@ export default function ReceiptGenerator() {
     }
 
     // Check free tier limit
-    const count = getReceiptCount();
-    if (count >= FREE_TIER_LIMIT) {
+    if (receiptCount.remaining <= 0) {
       setShowLimitWarning(true);
       return;
     }
@@ -142,6 +150,10 @@ export default function ReceiptGenerator() {
       const data = await res.json();
 
       if (!res.ok) {
+        if (data.errorType === 'FREE_TIER_LIMIT') {
+          setShowLimitWarning(true);
+          setReceiptCount(prev => ({ ...prev, remaining: 0 }));
+        }
         throw new Error(data.error || 'Failed to generate receipt');
       }
 
@@ -154,8 +166,7 @@ export default function ReceiptGenerator() {
       };
 
       setReceipt(receiptData);
-      incrementReceiptCount();
-      setReceiptCount(getReceiptCount());
+      fetchReceiptCount(); // Refresh count from server
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
@@ -202,8 +213,6 @@ export default function ReceiptGenerator() {
   const handlePrint = () => {
     window.print();
   };
-
-  const remainingReceipts = Math.max(0, FREE_TIER_LIMIT - receiptCount);
 
   return (
     <div className="space-y-6">
@@ -325,17 +334,17 @@ export default function ReceiptGenerator() {
           {/* Free Tier Counter */}
           <div className="flex justify-between items-center text-sm">
             <span className="text-slate-500">
-              {receiptCount} of {FREE_TIER_LIMIT} free receipts used
+              {receiptCount.count} of {receiptCount.limit} free receipts used
             </span>
-            {remainingReceipts > 0 && (
-              <span className="text-blue-600">{remainingReceipts} remaining</span>
+            {receiptCount.remaining > 0 && (
+              <span className="text-blue-600">{receiptCount.remaining} remaining</span>
             )}
           </div>
 
           {showLimitWarning && (
             <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg">
               <p className="text-sm text-amber-800">
-                You've reached the free limit of {FREE_TIER_LIMIT} receipts.
+                You&apos;ve reached the free limit of {FREE_TIER_LIMIT} receipts.
                 Sign up for Pro ($19/mo) for unlimited receipts.
               </p>
             </div>

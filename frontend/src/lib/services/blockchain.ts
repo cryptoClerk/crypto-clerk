@@ -30,13 +30,12 @@ export const CHAIN_NAMES: Record<string, string> = {
 };
 
 /**
- * Auto-detect chain from transaction hash format
- * All EVM chains use the same tx hash format (0x + 64 hex chars)
- * So we default to Ethereum and let user override
+ * Get default chain for a transaction hash.
+ * NOTE: All EVM chains use the same tx hash format (0x + 64 hex chars),
+ * so true chain detection requires trying each chain's API.
+ * For now, defaults to Ethereum and lets user override.
  */
 export function detectChainFromTxHash(_hash: string): SupportedChain {
-  // All EVM chains have same tx hash format
-  // Could potentially use chain-specific APIs if we had a registry
   return "ethereum";
 }
 
