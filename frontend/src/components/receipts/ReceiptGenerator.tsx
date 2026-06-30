@@ -15,6 +15,7 @@ import {
 import ReceiptPreview from './ReceiptPreview';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { useToast } from '@/components/ui/toast';
 
 interface TransactionData {
   txHash: string;
@@ -48,6 +49,7 @@ interface ReceiptCount {
 const FREE_TIER_LIMIT = 5;
 
 export default function ReceiptGenerator() {
+  const { addToast } = useToast();
   const [txHash, setTxHash] = useState('');
   const [chain, setChain] = useState('ethereum');
   const [clientName, setClientName] = useState('');
@@ -171,8 +173,10 @@ export default function ReceiptGenerator() {
 
       setReceipt(receiptData);
       fetchReceiptCount(); // Refresh count from server
+      addToast('Receipt generated successfully!', 'success');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
+      addToast(err instanceof Error ? err.message : 'Failed to generate receipt', 'error');
     } finally {
       setLoading(false);
     }
@@ -206,9 +210,11 @@ export default function ReceiptGenerator() {
 
       pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
       pdf.save(`receipt-${receipt.txHash.slice(0, 8)}.pdf`);
+      addToast('PDF downloaded successfully!', 'success');
     } catch (err) {
       console.error('PDF generation error:', err);
       setError('Failed to generate PDF. Try using Print to PDF instead.');
+      addToast('Failed to generate PDF. Try using Print to PDF instead.', 'error');
     } finally {
       setGeneratingPDF(false);
     }

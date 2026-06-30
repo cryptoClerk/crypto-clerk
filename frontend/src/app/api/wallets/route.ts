@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { logError } from "@/lib/logger";
 
 // Ethereum address validation regex
 const isValidAddress = (addr: string) => /^0x[a-fA-F0-9]{40}$/.test(addr);
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues }, { status: 400 });
     }
-    console.error("Wallet creation error:", error);
+    logError(error, "Wallet creation");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -64,7 +65,7 @@ export async function GET(request: Request) {
       }
     });
   } catch (error) {
-    console.error("Wallet fetch error:", error);
+    logError(error, "Wallet fetch");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -84,7 +85,7 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Wallet deletion error:", error);
+    logError(error, "Wallet deletion");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

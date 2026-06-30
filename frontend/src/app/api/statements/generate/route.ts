@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createProvider } from "@/lib/services/blockchain";
+import { logError } from "@/lib/logger";
 
 // Known stablecoins that are ~1:1 with USD
 const STABLECOINS = ['USDC', 'USDT', 'DAI', 'BUSD', 'TUSD', 'USDP'];
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues }, { status: 400 });
     }
-    console.error("Statement generation error:", error);
+    logError(error, "Statement generation");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

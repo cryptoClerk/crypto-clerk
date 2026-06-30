@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
+import { logError } from "@/lib/logger";
 
 // Known stablecoins that are ~1:1 with USD
 const STABLECOINS = ['USDC', 'USDT', 'DAI', 'BUSD', 'TUSD', 'USDP'];
@@ -122,7 +123,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues }, { status: 400, headers: getRateLimitHeaders(rateLimit) });
     }
-    console.error("Receipt generation error:", error);
+    logError(error, "Receipt generation");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500, headers: getRateLimitHeaders(rateLimit) }
@@ -164,7 +165,7 @@ export async function GET(request: Request) {
       remaining: Math.max(0, FREE_TIER_LIMIT - totalCount),
     });
   } catch (error) {
-    console.error("Receipt fetch error:", error);
+    logError(error, "Receipt fetch");
     return NextResponse.json(
       { error: "Failed to fetch receipts" },
       { status: 500 }

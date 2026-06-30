@@ -1,5 +1,22 @@
+'use client';
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "@/components/ui/theme-provider";
+
+function ThemeToggle() {
+  const { theme, toggleTheme } = useTheme();
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={toggleTheme}
+      className="text-white hover:bg-white/10"
+    >
+      {theme === 'light' ? '🌙' : '☀️'}
+    </Button>
+  );
+}
 
 export default function DashboardLayout({
   children,
@@ -24,6 +41,7 @@ export default function DashboardLayout({
             <Link href="/dashboard/statements" className="text-sm hover:text-slate-300">
               Statements
             </Link>
+            <ThemeToggle />
             <Button variant="outline" size="sm" className="text-white border-white/20">
               Sign Out
             </Button>

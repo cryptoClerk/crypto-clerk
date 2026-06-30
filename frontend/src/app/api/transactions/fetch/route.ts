@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createProvider, detectChainFromTxHash, SupportedChain, SUPPORTED_CHAINS, CHAIN_NAMES } from "@/lib/services/blockchain";
 import { checkRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
+import { logError } from "@/lib/logger";
 
 // Known stablecoins that are ~1:1 with USD
 const STABLECOINS = ['USDC', 'USDT', 'DAI', 'BUSD', 'TUSD', 'USDP'];
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues }, { status: 400, headers: getRateLimitHeaders(rateLimit) });
     }
-    console.error("Transaction fetch error:", error);
+    logError(error, "Transaction fetch");
     return NextResponse.json(
       { error: "Failed to fetch transaction", errorType: "FETCH_ERROR" },
       { status: 500, headers: getRateLimitHeaders(rateLimit) }
