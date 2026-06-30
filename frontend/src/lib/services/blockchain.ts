@@ -29,6 +29,14 @@ export const CHAIN_NAMES: Record<string, string> = {
   optimism: "Optimism",
 };
 
+export const CHAIN_API_KEYS: Record<string, string> = {
+  ethereum: "ETHERSCAN_API_KEY",
+  polygon: "POLYGONSCAN_API_KEY",
+  bsc: "BSCSCAN_API_KEY",
+  arbitrum: "ARBISCAN_API_KEY",
+  optimism: "OPTIMISTIC_ETHERSCAN_API_KEY",
+};
+
 /**
  * Attempt to detect which chain a transaction belongs to.
  * Since all EVM chains share the same tx hash format, we try each chain
@@ -55,7 +63,7 @@ export async function detectChainFromTxHash(hash: string): Promise<SupportedChai
 /**
  * MOCK PROVIDER
  *
- * TODO: Replace with real Etherscan API when you get API keys.
+ * Falls back to mock data when no API key is available.
  */
 export class MockProvider implements BlockchainProvider {
   private chain: string;
@@ -88,10 +96,9 @@ export class MockProvider implements BlockchainProvider {
 }
 
 /**
- * REAL PROVIDER (stub)
+ * ETHERSCAN PROVIDER
  *
- * TODO: Implement with actual Etherscan API calls.
- * Requires: ETHERSCAN_API_KEY env variable.
+ * Real blockchain data via Etherscan API and its variants.
  */
 export class EtherscanProvider implements BlockchainProvider {
   private apiKey: string;
@@ -123,8 +130,41 @@ export class EtherscanProvider implements BlockchainProvider {
     const url = `${this.baseUrl}?module=proxy&action=eth_getTransactionByHash&txhash=${hash}&apikey=${this.apiKey}`;
     const res = await fetch(url);
     const data = await res.json();
-    // TODO: Transform Etherscan response to our Transaction type
-    throw new Error("EtherscanProvider not yet implemented. Use MockProvider for now.");
+    
+    if (data.error || !data.result || data.result === null) {
+      return null;
+    }
+    
+    const tx = data.result;
+    
+    // Get block timestamp
+    let timestamp = "0";
+    if (tx.blockNumber) {
+      try {
+        const blockUrl = `${this.baseUrl}?module=proxy&action=eth_getBlockByNumber&tag=${tx.blockNumber}&boolean=true&apikey=${this.apiKey}`;
+        const blockRes = await fetch(blockUrl);
+        const blockData = await blockRes.json();
+        if (blockData.result && blockData.result.timestamp) {
+          timestamp = parseInt(blockData.result.timestamp, 16).toString();
+        }
+      } catch {
+        // Use current time as fallback
+        timestamp = Math.floor(Date.now() / 1000).toString();
+      }
+    }
+    
+    return {
+      txHash: tx.hash,
+      from: tx.from,
+      to: tx.to,
+      value: tx.value ? parseInt(tx.value, 16).toString() : "0",
+      timestamp,
+      blockNumber: tx.blockNumber ? parseInt(tx.blockNumber, 16).toString() : "0",
+      gasUsed: tx.gas ? parseInt(tx.gas, 16).toString() : "0",
+      gasPrice: tx.gasPrice ? parseInt(tx.gasPrice, 16).toString() : "0",
+      isError: tx.isError || "0",
+      receiptStatus: tx.txreceipt_status || "1",
+    };
   }
 
   async getTokenTransfers(
@@ -135,22 +175,53 @@ export class EtherscanProvider implements BlockchainProvider {
     const start = startBlock || 0;
     const end = endBlock || 99999999;
     const url = `${this.baseUrl}?module=account&action=tokentx&address=${address}&startblock=${start}&endblock=${end}&sort=desc&apikey=${this.apiKey}`;
+    
     const res = await fetch(url);
     const data = await res.json();
-    // TODO: Transform Etherscan response to our TokenTransfer type
-    throw new Error("EtherscanProvider not yet implemented. Use MockProvider for now.");
+    
+    if (data.status !== "1" || !data.result) {
+      return [];
+    }
+    
+    return data.result.map((t: any) => ({
+      txHash: t.hash,
+      blockNumber: t.blockNumber,
+      timestamp: t.timeStamp,
+      from: t.from,
+      to: t.to,
+      value: t.value,
+      tokenSymbol: t.tokenSymbol,
+      tokenDecimal: t.tokenDecimal,
+      contractAddress: t.contractAddress,
+      gasUsed: t.gasUsed,
+      gasPrice: t.gasPrice,
+    }));
   }
 
   async getBalance(address: string): Promise<string> {
     const url = `${this.baseUrl}?module=account&action=balance&address=${address}&tag=latest&apikey=${this.apiKey}`;
     const res = await fetch(url);
     const data = await res.json();
-    // TODO: Return balance
-    throw new Error("EtherscanProvider not yet implemented. Use MockProvider for now.");
+    
+    if (data.status !== "1" || !data.result) {
+      return "0";
+    }
+    
+    return data.result;
   }
 }
 
 export function createProvider(chain: string = "ethereum", apiKey?: string): BlockchainProvider {
+  if (apiKey && apiKey.length > 0) {
+    return new EtherscanProvider(apiKey, chain);
+  }
+  return new MockProvider(chain);
+}
+
+export function createProviderFromEnv(chain: string = "ethereum"): BlockchainProvider {
+  const envKey = CHAIN_API_KEYS[chain] || CHAIN_API_KEYS.ethereum;
+  const apiKey = process.env[envKey] || process.env.ETHERSCAN_API_KEY;
+  
   if (apiKey && apiKey.length > 0) {
     return new EtherscanProvider(apiKey, chain);
   }

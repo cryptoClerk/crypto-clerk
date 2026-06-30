@@ -1,13 +1,13 @@
-import { createProvider } from "./blockchain";
+import { createProvider, createProviderFromEnv } from "./blockchain";
 
-const provider = createProvider("ethereum");
+const provider = createProviderFromEnv("ethereum");
 
 export function getProvider() {
   return provider;
 }
 
 export function getProviderForChain(chain: string) {
-  return createProvider(chain);
+  return createProviderFromEnv(chain);
 }
 
-export { createProvider };
+export { createProvider, createProviderFromEnv };

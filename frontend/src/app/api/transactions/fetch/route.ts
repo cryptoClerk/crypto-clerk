@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createProvider, detectChainFromTxHash, SupportedChain, SUPPORTED_CHAINS, CHAIN_NAMES } from "@/lib/services/blockchain";
+import { createProviderFromEnv, detectChainFromTxHash, SupportedChain, SUPPORTED_CHAINS, CHAIN_NAMES } from "@/lib/services/blockchain";
 import { checkRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
 import { logError } from "@/lib/logger";
 
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     const validated = fetchSchema.parse(body);
 
     const chain = validated.chain || await detectChainFromTxHash(validated.txHash);
-    const provider = createProvider(chain);
+    const provider = createProviderFromEnv(chain);
 
     const tx = await provider.getTransaction(validated.txHash);
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createProvider } from "@/lib/services/blockchain";
+import { createProviderFromEnv } from "@/lib/services/blockchain";
 import { logError } from "@/lib/logger";
 
 // Known stablecoins that are ~1:1 with USD
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validated = statementSchema.parse(body);
 
-    const provider = createProvider(validated.chain);
+    const provider = createProviderFromEnv(validated.chain);
     const allTransfers: any[] = [];
 
     // Fetch token transfers for each wallet

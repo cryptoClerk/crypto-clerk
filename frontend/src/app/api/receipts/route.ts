@@ -73,8 +73,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const { createProvider } = await import("@/lib/services");
-    const provider = createProvider(validated.chain);
+    const { createProviderFromEnv } = await import("@/lib/services");
+    const provider = createProviderFromEnv(validated.chain);
 
     const tx = await provider.getTransaction(validated.txHash);
     if (!tx) {
