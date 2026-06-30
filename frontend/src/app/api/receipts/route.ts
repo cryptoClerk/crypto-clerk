@@ -7,7 +7,7 @@ import { logError } from "@/lib/logger";
 // Known stablecoins that are ~1:1 with USD
 const STABLECOINS = ['USDC', 'USDT', 'DAI', 'BUSD', 'TUSD', 'USDP'];
 
-function calculateUsdValue(amount: number, tokenSymbol: string): { value: string; isEstimated: boolean } {
+export function calculateUsdValue(amount: number, tokenSymbol: string): { value: string; isEstimated: boolean } {
   const upperToken = tokenSymbol.toUpperCase();
   if (STABLECOINS.includes(upperToken)) {
     return { value: amount.toFixed(2), isEstimated: false };
@@ -20,7 +20,7 @@ function calculateUsdValue(amount: number, tokenSymbol: string): { value: string
 const FREE_TIER_LIMIT = 5;
 
 // Ethereum tx hash validation
-const isValidTxHash = (hash: string) => /^0x[a-fA-F0-9]{64}$/.test(hash);
+export const isValidTxHash = (hash: string) => /^0x[a-fA-F0-9]{64}$/.test(hash);
 
 const receiptSchema = z.object({
   txHash: z.string().min(1).refine(isValidTxHash, {
