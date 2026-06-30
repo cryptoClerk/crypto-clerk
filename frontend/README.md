@@ -1,36 +1,137 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CryptoBooks
 
-## Getting Started
+Generate professional receipts, bank-style statements, and invoices from your blockchain transactions. No more Etherscan screenshots.
 
-First, run the development server:
+![Homepage](screenshot-homepage.png)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Features
+
+- **Receipt Generator** — Paste a tx hash, add client details, download a PDF
+- **Statements** — Multi-wallet, date-range, CSV export, bank-style PDF
+- **Multi-Chain** — Ethereum, Polygon, BSC, Arbitrum, Optimism
+- **Free Tier** — 5 receipts/month, no credit card
+- **PDF Export** — Professional receipts your accountant will love
+
+## Tech Stack
+
+- **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS, shadcn/ui
+- **Backend:** Next.js API routes, Prisma ORM
+- **Database:** PostgreSQL (Supabase)
+- **Blockchain:** Etherscan API (multi-chain)
+- **Auth:** Supabase Auth (optional, IP-based fallback)
+- **Payments:** Stripe (Phase 3)
+- **Deployment:** Render
+
+## Project Structure
+
+```
+cryptobooks/
+├── frontend/           # Next.js app
+│   ├── src/
+│   │   ├── app/        # App Router (pages + API routes)
+│   │   ├── components/ # React components
+│   │   ├── lib/        # Utilities, Prisma, auth
+│   │   └── data/       # Mock data (fallback)
+│   ├── prisma/         # Schema + migrations
+│   └── public/         # Static assets
+├── docs/               # Business docs, API spec
+├── design/             # Wireframes, UI components
+└── planning/           # Roadmap, milestones
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Prerequisites
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Node.js 20+
+- npm or yarn
 
-## Learn More
+### Environment Variables
 
-To learn more about Next.js, take a look at the following resources:
+Create `frontend/.env.local`:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+# Database (Supabase)
+DATABASE_URL="postgresql://postgres:password@db.project.supabase.co:5432/postgres"
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Blockchain APIs
+ETHERSCAN_API_KEY="your-etherscan-key"
 
-## Deploy on Vercel
+# Auth (Supabase — optional for MVP)
+NEXT_PUBLIC_SUPABASE_URL="https://project.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
+SUPABASE_SERVICE_ROLE_KEY="your-service-key"
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Payments (Stripe — Phase 3)
+# STRIPE_SECRET_KEY="sk_live_..."
+# STRIPE_WEBHOOK_SECRET="whsec_..."
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# CORS
+ALLOWED_ORIGIN="https://your-app.onrender.com"
+```
+
+### Local Development
+
+```bash
+cd frontend
+npm install
+npx prisma generate
+npm run dev
+```
+
+Open http://localhost:3000
+
+### Database Setup
+
+```bash
+cd frontend
+npx prisma migrate dev
+```
+
+## Deployment
+
+### Render (Recommended)
+
+1. Connect GitHub repo in Render dashboard
+2. Set root directory to `frontend`
+3. Add environment variables in Render dashboard
+4. Deploy
+
+### Vercel (Alternative)
+
+1. Import GitHub repo in Vercel
+2. Set root directory to `frontend`
+3. Add environment variables
+4. Deploy
+
+## API Endpoints
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/health` | Health check | None |
+| GET | `/api/receipts` | List receipts | IP-based |
+| POST | `/api/receipts` | Create receipt | IP-based |
+| GET | `/api/wallets` | List wallets | None |
+| POST | `/api/wallets` | Add wallet | None |
+| DELETE | `/api/wallets` | Remove wallet | None |
+| GET | `/api/transactions/fetch` | Fetch tx data | None |
+| POST | `/api/statements/generate` | Generate statement | None |
+
+See `docs/API_REFERENCE.md` for full documentation.
+
+## Contributing
+
+See `docs/development/` for architecture, API spec, and testing strategy.
+
+## Roadmap
+
+- Phase 0: MVP (receipts, local SQLite, mock data) ✅
+- Phase 1: Real blockchain data (Etherscan integration) ✅
+- Phase 2: Dashboard, statements, CSV export ✅
+- Phase 3: Landing page, Stripe payments, Pro/Business tiers ✅
+- Phase 4: Supabase Auth, user accounts, multi-tenancy
+- Phase 5: Mobile app, more chains, accountant portal
+
+## License
+
+MIT
