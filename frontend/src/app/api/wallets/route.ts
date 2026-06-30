@@ -7,11 +7,11 @@ import { logError } from "@/lib/logger";
 const isValidAddress = (addr: string) => /^0x[a-fA-F0-9]{40}$/.test(addr);
 
 const walletSchema = z.object({
-  address: z.string().min(1).refine(isValidAddress, {
+  address: z.string().min(1).max(42).refine(isValidAddress, {
     message: "Invalid Ethereum address format. Must be 0x followed by 40 hex characters.",
   }),
-  chain: z.string().min(1),
-  label: z.string().optional(),
+  chain: z.string().min(1).max(20),
+  label: z.string().max(100).trim().optional(),
 });
 
 export async function POST(request: Request) {

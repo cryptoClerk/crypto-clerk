@@ -23,14 +23,14 @@ const FREE_TIER_LIMIT = 5;
 export const isValidTxHash = (hash: string) => /^0x[a-fA-F0-9]{64}$/.test(hash);
 
 const receiptSchema = z.object({
-  txHash: z.string().min(1).refine(isValidTxHash, {
+  txHash: z.string().min(1).max(66).refine(isValidTxHash, {
     message: "Invalid transaction hash format. Must be 0x followed by 64 hex characters.",
   }),
-  chain: z.string().min(1),
-  clientName: z.string().min(1),
-  description: z.string().min(1),
-  businessName: z.string().optional(),
-  businessAddress: z.string().optional(),
+  chain: z.string().min(1).max(20),
+  clientName: z.string().min(1).max(100).trim(),
+  description: z.string().min(1).max(500).trim(),
+  businessName: z.string().max(100).trim().optional(),
+  businessAddress: z.string().max(200).trim().optional(),
 });
 
 function getClientIP(request: Request): string {
