@@ -137,7 +137,7 @@ export default function StatementPreview({
                   </TableRow>
                 ) : (
                   displayTxns.map((txn, index) => (
-                    <TableRow key={txn.txHash + index}>
+                    <TableRow key={`${txn.txHash}-${txn.date}-${index}`}>
                       <TableCell className="text-sm">
                         {formatDate(txn.date)}
                       </TableCell>

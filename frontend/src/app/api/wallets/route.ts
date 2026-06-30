@@ -38,13 +38,31 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // TODO: Filter by authenticated user
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
+    const skip = (page - 1) * limit;
+    
+    const totalCount = await prisma.wallet.count();
+    
     const wallets = await prisma.wallet.findMany({
       orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
     });
-    return NextResponse.json({ wallets });
+    
+    return NextResponse.json({ 
+      wallets,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        hasMore: skip + wallets.length < totalCount,
+      }
+    });
   } catch (error) {
     console.error("Wallet fetch error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

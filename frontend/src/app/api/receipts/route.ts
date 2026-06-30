@@ -18,8 +18,13 @@ function calculateUsdValue(amount: number, tokenSymbol: string): { value: string
 
 const FREE_TIER_LIMIT = 5;
 
+// Ethereum tx hash validation
+const isValidTxHash = (hash: string) => /^0x[a-fA-F0-9]{64}$/.test(hash);
+
 const receiptSchema = z.object({
-  txHash: z.string().min(1),
+  txHash: z.string().min(1).refine(isValidTxHash, {
+    message: "Invalid transaction hash format. Must be 0x followed by 64 hex characters.",
+  }),
   chain: z.string().min(1),
   clientName: z.string().min(1),
   description: z.string().min(1),
@@ -128,22 +133,35 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   try {
     const ip = getClientIP(request);
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 100); // Max 100 per page
+    const skip = (page - 1) * limit;
     
-    // Get receipt count for this IP
-    const receiptCount = await prisma.receipt.count({
+    // Get total count for this IP
+    const totalCount = await prisma.receipt.count({
       where: { ipAddress: ip },
     });
     
     const receipts = await prisma.receipt.findMany({
+      where: { ipAddress: ip },
       orderBy: { createdAt: "desc" },
-      take: 50,
+      skip,
+      take: limit,
     });
     
     return NextResponse.json({ 
       receipts,
-      count: receiptCount,
-      limit: FREE_TIER_LIMIT,
-      remaining: Math.max(0, FREE_TIER_LIMIT - receiptCount),
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        hasMore: skip + receipts.length < totalCount,
+      },
+      count: totalCount,
+      freeTierLimit: FREE_TIER_LIMIT,
+      remaining: Math.max(0, FREE_TIER_LIMIT - totalCount),
     });
   } catch (error) {
     console.error("Receipt fetch error:", error);

@@ -34,19 +34,17 @@ export async function POST(request: Request) {
     for (const address of validated.walletAddresses) {
       const transfers = await provider.getTokenTransfers(address);
       
-      // Filter by date range if provided
+      // Filter by date range if provided (compare ISO strings to avoid timezone issues)
       const filteredTransfers = transfers.filter((t: any) => {
-        const txDate = new Date(parseInt(t.timestamp) * 1000);
+        const txTimestamp = parseInt(t.timestamp) * 1000;
+        const txDateISO = new Date(txTimestamp).toISOString().split('T')[0];
         
         if (validated.startDate) {
-          const start = new Date(validated.startDate);
-          if (txDate < start) return false;
+          if (txDateISO < validated.startDate) return false;
         }
         
         if (validated.endDate) {
-          const end = new Date(validated.endDate);
-          end.setHours(23, 59, 59, 999);
-          if (txDate > end) return false;
+          if (txDateISO > validated.endDate) return false;
         }
         
         return true;

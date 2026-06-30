@@ -46,9 +46,10 @@
 
 ## ⚠️ HIGH (Fix before public launch)
 
-### 9. No Authentication / Authorization
+### 9. No Authentication / Authorization ✅ PARTIALLY FIXED
 **Impact:** Anyone can create, read, delete any wallet, receipt, or statement. There's no concept of "your data."
-**Fix:** This is expected for MVP but MUST be fixed before real users. Add Supabase Auth or Clerk.
+**Fix Applied:** Added IP-based soft scoping to receipts (GET now filters by IP). Added `src/lib/auth.ts` with `getClientIP()` and `requireAuth()` helpers ready for real auth integration.
+**Note:** Still needs real auth (Supabase/Clerk) before public launch. IP-based scoping is a temporary measure.
 
 ### 10. USD Value Calculation Is Wrong for Non-Stablecoins ✅ FIXED
 **File:** `src/app/api/receipts/route.ts`, `src/app/api/transactions/fetch/route.ts`, `src/app/api/statements/generate/route.ts`
@@ -56,30 +57,25 @@
 **Fix Applied:** Added `calculateUsdValue()` helper that checks if token is a known stablecoin. For stablecoins: `$X.XX`. For non-stablecoins: returns raw amount with `isEstimated: true` flag. UI shows amber warning indicator on receipts when USD is estimated.
 **Note:** Still needs CoinGecko integration for real non-stablecoin prices.
 
-### 11. No CORS Configuration
+### 11. No CORS Configuration ✅ FIXED
 **File:** `next.config.ts`
-**Issue:** Default Next.js CORS allows all origins. When the API is public, this could be a security risk.
-**Fix:** Add CORS headers to API routes restricting to your domain.
+**Fix Applied:** Added CORS headers to all `/api/*` routes with configurable `ALLOWED_ORIGIN` env var. Defaults to `*` for development.
 
-### 12. Missing `key` Prop Stability in Lists
+### 12. Missing `key` Prop Stability in Lists ✅ FIXED
 **File:** `src/components/statements/StatementPreview.tsx`
-**Issue:** Uses `key={txn.txHash + index}` which is unstable if two transactions have the same hash (unlikely but possible with different indices).
-**Fix:** Use a truly unique key or just `index` if order is guaranteed.
+**Fix Applied:** Changed key from `txn.txHash + index` to `${txn.txHash}-${txn.date}-${index}` for better stability.
 
-### 13. Date String Comparison Is Timezone-Sensitive
+### 13. Date String Comparison Is Timezone-Sensitive ✅ FIXED
 **File:** `src/app/api/statements/generate/route.ts`
-**Issue:** The date filtering compares JavaScript Date objects which are timezone-aware. A transaction at 11pm UTC on Dec 31 might show as Jan 1 locally.
-**Fix:** Use ISO string comparison or normalize all dates to UTC before comparing.
+**Fix Applied:** Changed date filtering to compare ISO date strings (`YYYY-MM-DD`) instead of Date objects, eliminating timezone issues.
 
-### 14. `URL.createObjectURL` Memory Leak in CSV Export
+### 14. `URL.createObjectURL` Memory Leak in CSV Export ✅ FIXED
 **File:** `src/app/dashboard/statements/page.tsx`
-**Issue:** Creates a blob URL but revokes it immediately after click. However, there's a small race condition where the click might not complete before revoke.
-**Fix:** Use `setTimeout(() => URL.revokeObjectURL(url), 100)` instead of immediate revoke.
+**Fix Applied:** Already had `setTimeout(() => URL.revokeObjectURL(url), 100)` — verified this is correct.
 
-### 15. No Pagination on List Endpoints
-**File:** `src/app/api/receipts/route.ts` (GET), `src/app/api/wallets/route.ts` (GET)
-**Issue:** Returns ALL records (or top 50 for receipts). As the database grows, these endpoints will get slower and eventually OOM.
-**Fix:** Add cursor-based pagination with `skip`/`take` parameters.
+### 15. No Pagination on List Endpoints ✅ FIXED
+**File:** `src/app/api/receipts/route.ts`, `src/app/api/wallets/route.ts`
+**Fix Applied:** Added `page`, `limit`, `skip`, `take` parameters to both endpoints. Returns pagination metadata including `total`, `totalPages`, `hasMore`.
 
 ---
 
@@ -90,14 +86,13 @@
 **Issue:** `console.error()` logs will clutter production logs and potentially leak sensitive info.
 **Fix:** Replace with a proper logging service (Sentry, LogRocket) or at minimum, check `process.env.NODE_ENV` before logging.
 
-### 17. No Health Check Endpoint
+### 17. No Health Check Endpoint ✅ FIXED
 **Impact:** No way for monitoring tools (Vercel, UptimeRobot) to verify the app is actually working vs. just returning 200 on `/`.
-**Fix:** Add `/api/health` that checks database connectivity.
+**Fix Applied:** Added `/api/health` endpoint that checks database connectivity and returns `status: "healthy"` or `status: "unhealthy"` with 503.
 
-### 18. No Input Validation on txHash Format
+### 18. No Input Validation on txHash Format ✅ FIXED
 **File:** All API routes accepting txHash
-**Issue:** Accepts any string. Could pass garbage that causes downstream issues.
-**Fix:** Add regex validation: `/^0x[a-fA-F0-9]{64}$/`
+**Fix Applied:** Added regex validation `^0x[a-fA-F0-9]{64}$` to both `/api/receipts` and `/api/transactions/fetch` routes via Zod refinement.
 
 ### 19. `businessName` and `businessAddress` Not Saved to DB ✅ FIXED
 **File:** `src/app/api/receipts/route.ts`
