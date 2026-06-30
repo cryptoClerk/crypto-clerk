@@ -1,8 +1,8 @@
 /**
  * MOCK BLOCKCHAIN DATA
  * 
- * TODO: Replace with real Etherscan API when you get API keys.
- * See docs/TODO.md for migration instructions.
+ * Fallback data for development and when Etherscan API is unavailable.
+ * Real blockchain data is fetched via Etherscan when API keys are configured.
  */
 
 export interface TokenTransfer {

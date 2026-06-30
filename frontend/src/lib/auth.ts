@@ -1,6 +1,6 @@
 /**
- * Simple IP-based scoping middleware as a temporary auth measure.
- * TODO: Replace with real auth (Supabase/Clerk) before public launch.
+ * Simple IP-based scoping middleware.
+ * Used for free tier tracking until Supabase/Clerk auth is configured.
  */
 
 export function getClientIP(request: Request): string {
@@ -14,7 +14,7 @@ export function getClientIP(request: Request): string {
 export function requireAuth(request: Request): { ip: string; isAuthenticated: false } {
   const ip = getClientIP(request);
   
-  // TODO: When real auth is implemented, check for session/token here
+  // When Supabase auth is added, check for session/token here
   // and return { userId, isAuthenticated: true }
   
   return { ip, isAuthenticated: false };

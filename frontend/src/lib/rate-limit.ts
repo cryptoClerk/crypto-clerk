@@ -1,6 +1,6 @@
 /**
- * Simple in-memory rate limiter for API routes
- * TODO: Replace with Redis-based rate limiter for production
+ * Simple in-memory rate limiter for API routes.
+ * For multi-instance scaling, consider Redis-based rate limiting.
  */
 
 interface RateLimitEntry {

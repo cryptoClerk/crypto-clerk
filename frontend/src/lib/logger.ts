@@ -1,6 +1,6 @@
 /**
  * Safe logger that only logs in development.
- * TODO: Replace with Sentry/LogRocket in production.
+ * Optional: Add Sentry/LogRocket in production for error tracking.
  */
 export function logError(error: unknown, context?: string) {
   if (process.env.NODE_ENV === "development") {
@@ -10,7 +10,7 @@ export function logError(error: unknown, context?: string) {
       console.error(error);
     }
   }
-  // TODO: Send to error tracking service in production
+  // Optional: Send to error tracking service in production
 }
 
 export function logWarn(message: string, context?: string) {
