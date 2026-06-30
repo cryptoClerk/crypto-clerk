@@ -1,9 +1,10 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
 // Validate required environment variables at startup
 if (!process.env.DATABASE_URL) {
-  console.warn("WARNING: DATABASE_URL not set. Using default SQLite database.");
+  console.warn("WARNING: DATABASE_URL not set.");
 }
 
 const globalForPrisma = global as unknown as {
@@ -13,9 +14,8 @@ const globalForPrisma = global as unknown as {
 function getPrismaClient() {
   if (globalForPrisma.prisma) return globalForPrisma.prisma;
 
-  const databaseUrl = process.env.DATABASE_URL || "file:./dev.db";
-  const dbPath = databaseUrl.replace("file:", "");
-  const adapter = new PrismaBetterSqlite3({ url: dbPath });
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const adapter = new PrismaPg(pool);
   const prisma = new PrismaClient({ adapter, log: ["error"] });
 
   globalForPrisma.prisma = prisma;
