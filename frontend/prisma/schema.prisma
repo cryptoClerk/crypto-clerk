@@ -30,22 +30,24 @@ model Wallet {
 }
 
 model Receipt {
-  id          String   @id @default(uuid())
-  txHash      String
-  chain       String
-  fromAddress String
-  toAddress   String
-  amount      String   // store as string for precision
-  token       String   // USDC, USDT, DAI, ETH
-  usdValue    String?  // store as string for precision
-  clientName  String
-  description String
-  date        DateTime
-  pdfUrl      String?
-  ipAddress   String?  // For free tier tracking (until auth is implemented)
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id])
-  createdAt   DateTime @default(now())
+  id              String   @id @default(uuid())
+  txHash          String
+  chain           String
+  fromAddress     String
+  toAddress       String
+  amount          String   // store as string for precision
+  token           String   // USDC, USDT, DAI, ETH
+  usdValue        String?  // store as string for precision
+  clientName      String
+  description     String
+  businessName    String?
+  businessAddress String?
+  date            DateTime
+  pdfUrl          String?
+  ipAddress       String?  // For free tier tracking (until auth is implemented)
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id])
+  createdAt       DateTime @default(now())
 }
 
 model Statement {

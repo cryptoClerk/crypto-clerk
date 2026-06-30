@@ -2,6 +2,19 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createProvider } from "@/lib/services/blockchain";
 
+// Known stablecoins that are ~1:1 with USD
+const STABLECOINS = ['USDC', 'USDT', 'DAI', 'BUSD', 'TUSD', 'USDP'];
+
+function calculateUsdValue(amount: number, tokenSymbol: string): { value: string; isEstimated: boolean } {
+  const upperToken = tokenSymbol.toUpperCase();
+  if (STABLECOINS.includes(upperToken)) {
+    return { value: amount.toFixed(2), isEstimated: false };
+  }
+  // For non-stablecoins, return raw amount with a flag indicating it's not USD
+  // TODO: Integrate CoinGecko API for real-time/historical prices
+  return { value: amount.toFixed(6), isEstimated: true };
+}
+
 const statementSchema = z.object({
   walletAddresses: z.array(z.string().min(1)).min(1),
   chain: z.string().default("ethereum"),
@@ -51,7 +64,7 @@ export async function POST(request: Request) {
     // Calculate USD values and format
     const formattedTransfers = allTransfers.map((t: any) => {
       const amount = parseFloat(t.value) / Math.pow(10, parseInt(t.tokenDecimal));
-      const usdValue = amount.toFixed(2); // For stablecoins
+      const usdCalc = calculateUsdValue(amount, t.tokenSymbol);
       
       return {
         txHash: t.txHash,
@@ -60,13 +73,19 @@ export async function POST(request: Request) {
         to: t.to,
         amount: amount.toString(),
         token: t.tokenSymbol,
-        usdValue,
+        usdValue: usdCalc.value,
+        usdIsEstimated: usdCalc.isEstimated,
         walletAddress: t.walletAddress,
       };
     });
 
-    // Calculate totals
-    const totalIncome = formattedTransfers.reduce((sum, t) => sum + parseFloat(t.usdValue), 0);
+    // Calculate totals (only sum stablecoin values for accurate totals)
+    const totalIncome = formattedTransfers.reduce((sum, t) => {
+      if (!t.usdIsEstimated) {
+        return sum + parseFloat(t.usdValue);
+      }
+      return sum;
+    }, 0);
 
     return NextResponse.json({
       success: true,

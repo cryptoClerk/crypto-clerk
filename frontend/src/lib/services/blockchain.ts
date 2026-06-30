@@ -30,12 +30,25 @@ export const CHAIN_NAMES: Record<string, string> = {
 };
 
 /**
- * Get default chain for a transaction hash.
- * NOTE: All EVM chains use the same tx hash format (0x + 64 hex chars),
- * so true chain detection requires trying each chain's API.
- * For now, defaults to Ethereum and lets user override.
+ * Attempt to detect which chain a transaction belongs to.
+ * Since all EVM chains share the same tx hash format, we try each chain
+ * and return the first one where the transaction is found.
+ * For mock data, falls back to ethereum.
  */
-export function detectChainFromTxHash(_hash: string): SupportedChain {
+export async function detectChainFromTxHash(hash: string): Promise<SupportedChain> {
+  const { createProvider } = await import("@/lib/services");
+  
+  for (const chain of SUPPORTED_CHAINS) {
+    try {
+      const provider = createProvider(chain);
+      const tx = await provider.getTransaction(hash);
+      if (tx) return chain;
+    } catch {
+      // Continue to next chain
+    }
+  }
+  
+  // Fallback to ethereum if not found anywhere
   return "ethereum";
 }
 

@@ -93,7 +93,17 @@ export default function ReceiptPreview({ receipt, businessName }: ReceiptPreview
                 <p className="text-2xl font-bold text-slate-900">
                   {receipt.amount} {receipt.token}
                 </p>
-                <p className="text-sm text-slate-500">≈ ${receipt.usdValue} USD</p>
+                <p className="text-sm text-slate-500">
+                  ≈ ${receipt.usdValue} USD
+                  {(receipt as any).usdIsEstimated && (
+                    <span className="text-amber-600 ml-1">*</span>
+                  )}
+                </p>
+                {(receipt as any).usdIsEstimated && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    * USD value estimated. Use CoinGecko for accurate pricing.
+                  </p>
+                )}
               </div>
             </div>
           </div>

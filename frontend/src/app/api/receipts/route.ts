@@ -3,6 +3,19 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
 
+// Known stablecoins that are ~1:1 with USD
+const STABLECOINS = ['USDC', 'USDT', 'DAI', 'BUSD', 'TUSD', 'USDP'];
+
+function calculateUsdValue(amount: number, tokenSymbol: string): { value: string; isEstimated: boolean } {
+  const upperToken = tokenSymbol.toUpperCase();
+  if (STABLECOINS.includes(upperToken)) {
+    return { value: amount.toFixed(2), isEstimated: false };
+  }
+  // For non-stablecoins, return raw amount with a flag indicating it's not USD
+  // TODO: Integrate CoinGecko API for real-time/historical prices
+  return { value: amount.toFixed(6), isEstimated: true };
+}
+
 const FREE_TIER_LIMIT = 5;
 
 const receiptSchema = z.object({
@@ -76,7 +89,7 @@ export async function POST(request: Request) {
     }
 
     const amount = parseFloat(transfer.value) / Math.pow(10, parseInt(transfer.tokenDecimal));
-    const usdValue = amount.toFixed(2);
+    const usdCalc = calculateUsdValue(amount, transfer.tokenSymbol);
 
     const receipt = await prisma.receipt.create({
       data: {
@@ -86,15 +99,20 @@ export async function POST(request: Request) {
         toAddress: transfer.to,
         amount: amount.toString(),
         token: transfer.tokenSymbol,
-        usdValue: usdValue,
+        usdValue: usdCalc.value,
         clientName: validated.clientName,
         description: validated.description,
+        businessName: validated.businessName,
+        businessAddress: validated.businessAddress,
         date: new Date(parseInt(transfer.timestamp) * 1000),
         ipAddress: ip,
       },
     });
 
-    return NextResponse.json({ success: true, receipt }, { headers: getRateLimitHeaders(rateLimit) });
+    return NextResponse.json(
+      { success: true, receipt, usdIsEstimated: usdCalc.isEstimated },
+      { headers: getRateLimitHeaders(rateLimit) }
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues }, { status: 400, headers: getRateLimitHeaders(rateLimit) });

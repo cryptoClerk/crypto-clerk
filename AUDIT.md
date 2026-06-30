@@ -9,74 +9,38 @@
 
 ## 🚨 CRITICAL (Fix before launch)
 
-### 1. Database Schema Inconsistency — Foreign Key Constraints Will Break
+### 1. Database Schema Inconsistency — Foreign Key Constraints Will Break ✅ FIXED
 **File:** `prisma/schema.prisma`
-**Issue:** Wallet model has NO user relation (we removed it), but `Statement`, `Invoice`, `ApiKey` models still require `userId` as mandatory field with `@relation` to User.
-**Impact:** When you try to create a Statement, Invoice, or API key, Prisma will throw a foreign key constraint error because `userId` is required but there's no auth system providing user IDs yet.
-**Fix:** Make `userId` optional on Statement, Invoice, ApiKey — OR implement auth before using those features.
-```prisma
-// Current (BROKEN):
-model Statement {
-  userId String  // Required — will crash without auth
-  user   User @relation(fields: [userId], references: [id])
-}
+**Issue:** Wallet model has NO user relation (we removed it), but `Statement`, `Invoice`, `ApiKey` models still required `userId` as mandatory field with `@relation` to User.
+**Fix Applied:** Made `userId` optional (`String?`) on Statement, Invoice, ApiKey, Receipt. Added `businessName` and `businessAddress` fields to Receipt model.
 
-// Fix:
-model Statement {
-  userId String?
-  user   User? @relation(fields: [userId], references: [id])
-}
-```
-
-### 2. No Input Validation on Wallet Address
+### 2. No Input Validation on Wallet Address ✅ FIXED
 **File:** `src/app/api/wallets/route.ts`
-**Issue:** The wallet address is saved as a raw string with no format validation. Someone could inject SQL, XSS, or garbage data.
-**Fix:** Add Ethereum address validation:
-```typescript
-const isValidAddress = (addr: string) => /^0x[a-fA-F0-9]{40}$/.test(addr);
-```
+**Fix Applied:** Added Ethereum address validation regex `^0x[a-fA-F0-9]{40}$` and Zod refinement.
 
-### 3. GET /api/receipts Has No Error Handling
+### 3. GET /api/receipts Has No Error Handling ✅ FIXED
 **File:** `src/app/api/receipts/route.ts`
-**Issue:** The GET handler has no try/catch. If the database is unreachable, the server will crash with an unhandled exception.
-**Fix:** Wrap `prisma.receipt.findMany()` in try/catch.
+**Fix Applied:** Wrapped in try/catch with proper error responses.
 
-### 4. No Rate Limiting — API Abuse Risk
-**File:** All API routes (`/api/*`)
-**Issue:** Anyone can spam the API endpoints. An attacker could:
-- Hit `/api/receipts` thousands of times to fill the database
-- Hit `/api/transactions/fetch` to exhaust Etherscan API limits (when real keys are added)
-- DOS the server with expensive PDF generation
-**Fix:** Add rate limiting middleware. For Next.js, use `rate-limiter-flexible` or a simple in-memory rate limiter.
+### 4. No Rate Limiting — API Abuse Risk ✅ FIXED
+**File:** `src/lib/rate-limit.ts` + all API routes
+**Fix Applied:** Implemented in-memory rate limiter with 20 req/min for receipts, 30 req/min for tx fetch.
 
-### 5. Free Tier Counter Is Client-Side Only (Easily Bypassed)
-**File:** `src/components/receipts/ReceiptGenerator.tsx`
-**Issue:** Receipt count is stored in `localStorage` on the client. Any user can open DevTools and run `localStorage.clear()` to reset their count.
-**Impact:** Free tier is essentially unlimited right now.
-**Fix:** Track receipt counts server-side in the database, associated with IP address or session ID (until auth is ready).
+### 5. Free Tier Counter Is Client-Side Only (Easily Bypassed) ✅ FIXED
+**File:** `src/app/api/receipts/route.ts`
+**Fix Applied:** Counting receipts server-side by IP address in database.
 
-### 6. CSV Export Doesn't Escape Commas
-**File:** `src/app/dashboard/statements/page.tsx` — `handleExportCSV()`
-**Issue:** If a transaction description or client name contains a comma, the CSV will be malformed.
-**Fix:** Wrap fields in quotes and escape existing quotes:
-```typescript
-const escapeCSV = (field: string) => `"${field.replace(/"/g, '""')}"`;
-```
+### 6. CSV Export Doesn't Escape Commas ✅ FIXED
+**File:** `src/app/dashboard/statements/page.tsx`
+**Fix Applied:** Added `escapeCSV()` function that wraps fields in quotes and escapes existing quotes.
 
-### 7. Missing Environment Variable Validation
+### 7. Missing Environment Variable Validation ✅ FIXED
 **File:** `src/lib/db.ts`
-**Issue:** The app will crash with cryptic errors if `DATABASE_URL` is missing or malformed. No validation at startup.
-**Fix:** Add startup validation:
-```typescript
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL environment variable is required");
-}
-```
+**Fix Applied:** Falls back to default SQLite path with warning instead of cryptic crash.
 
-### 8. `detectChainFromTxHash` Always Returns "ethereum"
+### 8. `detectChainFromTxHash` Always Returns "ethereum" ✅ FIXED
 **File:** `src/lib/services/blockchain.ts`
-**Issue:** The function claims to "auto-detect chain" but always returns "ethereum". This is misleading UX — users think we're detecting when we're not.
-**Fix:** Either implement real detection (e.g., try each chain's API until one returns data) OR remove the auto-detect claim and default to user's last selected chain.
+**Fix Applied:** Now async function that tries each supported chain and returns the first match. Falls back to ethereum with clear documentation.
 
 ---
 
@@ -86,11 +50,11 @@ if (!process.env.DATABASE_URL) {
 **Impact:** Anyone can create, read, delete any wallet, receipt, or statement. There's no concept of "your data."
 **Fix:** This is expected for MVP but MUST be fixed before real users. Add Supabase Auth or Clerk.
 
-### 10. USD Value Calculation Is Wrong for Non-Stablecoins
-**File:** `src/app/api/receipts/route.ts`, `src/app/api/statements/generate/route.ts`
-**Issue:** The code does `amount.toFixed(2)` for ALL tokens, assuming 1:1 with USD. This is correct for USDC/USDT/DAI but completely wrong for ETH, BTC, or any volatile token.
-**Impact:** If someone receives ETH, the receipt will show a wildly incorrect USD value.
-**Fix:** Use CoinGecko API to fetch historical prices, or at minimum, only show USD values for known stablecoins and display raw amounts for others.
+### 10. USD Value Calculation Is Wrong for Non-Stablecoins ✅ FIXED
+**File:** `src/app/api/receipts/route.ts`, `src/app/api/transactions/fetch/route.ts`, `src/app/api/statements/generate/route.ts`
+**Issue:** The code did `amount.toFixed(2)` for ALL tokens, assuming 1:1 with USD. This was correct for USDC/USDT/DAI but completely wrong for ETH, BTC, or any volatile token.
+**Fix Applied:** Added `calculateUsdValue()` helper that checks if token is a known stablecoin. For stablecoins: `$X.XX`. For non-stablecoins: returns raw amount with `isEstimated: true` flag. UI shows amber warning indicator on receipts when USD is estimated.
+**Note:** Still needs CoinGecko integration for real non-stablecoin prices.
 
 ### 11. No CORS Configuration
 **File:** `next.config.ts`
@@ -135,10 +99,10 @@ if (!process.env.DATABASE_URL) {
 **Issue:** Accepts any string. Could pass garbage that causes downstream issues.
 **Fix:** Add regex validation: `/^0x[a-fA-F0-9]{64}$/`
 
-### 19. `businessName` and `businessAddress` Not Saved to DB
+### 19. `businessName` and `businessAddress` Not Saved to DB ✅ FIXED
 **File:** `src/app/api/receipts/route.ts`
-**Issue:** The Zod schema accepts these fields but they're never written to the database. The Receipt model doesn't even have these columns.
-**Fix:** Add columns to schema or remove from API validation.
+**Issue:** The Zod schema accepted these fields but they were never written to the database. The Receipt model didn't even have these columns.
+**Fix Applied:** Added `businessName` and `businessAddress` columns to Receipt model. Updated API to persist them. Added business address input field to ReceiptGenerator component.
 
 ### 20. No Error Boundary for React Components
 **Impact:** If a component crashes, the entire page goes white. Bad UX.

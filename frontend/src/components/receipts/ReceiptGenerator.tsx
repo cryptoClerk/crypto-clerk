@@ -36,6 +36,7 @@ interface ReceiptData extends TransactionData {
   clientName: string;
   description: string;
   createdAt: string;
+  usdIsEstimated?: boolean;
 }
 
 interface ReceiptCount {
@@ -52,6 +53,7 @@ export default function ReceiptGenerator() {
   const [clientName, setClientName] = useState('');
   const [description, setDescription] = useState('');
   const [businessName, setBusinessName] = useState('');
+  const [businessAddress, setBusinessAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
@@ -144,6 +146,7 @@ export default function ReceiptGenerator() {
           clientName,
           description,
           businessName,
+          businessAddress,
         }),
       });
 
@@ -163,6 +166,7 @@ export default function ReceiptGenerator() {
         clientName,
         description,
         createdAt: data.receipt.createdAt,
+        usdIsEstimated: data.usdIsEstimated || false,
       };
 
       setReceipt(receiptData);
@@ -327,6 +331,17 @@ export default function ReceiptGenerator() {
               placeholder="Alex Design Co"
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="businessAddress">Your Business Address (optional)</Label>
+            <Input
+              id="businessAddress"
+              placeholder="123 Main St, New York, NY 10001"
+              value={businessAddress}
+              onChange={(e) => setBusinessAddress(e.target.value)}
               disabled={loading}
             />
           </div>

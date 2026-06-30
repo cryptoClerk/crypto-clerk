@@ -3,6 +3,19 @@ import { z } from "zod";
 import { createProvider, detectChainFromTxHash, SupportedChain, SUPPORTED_CHAINS, CHAIN_NAMES } from "@/lib/services/blockchain";
 import { checkRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
 
+// Known stablecoins that are ~1:1 with USD
+const STABLECOINS = ['USDC', 'USDT', 'DAI', 'BUSD', 'TUSD', 'USDP'];
+
+function calculateUsdValue(amount: number, tokenSymbol: string): { value: string; isEstimated: boolean } {
+  const upperToken = tokenSymbol.toUpperCase();
+  if (STABLECOINS.includes(upperToken)) {
+    return { value: amount.toFixed(2), isEstimated: false };
+  }
+  // For non-stablecoins, return raw amount with a flag indicating it's not USD
+  // TODO: Integrate CoinGecko API for real-time/historical prices
+  return { value: amount.toFixed(6), isEstimated: true };
+}
+
 // Ethereum tx hash validation
 const isValidTxHash = (hash: string) => /^0x[a-fA-F0-9]{64}$/.test(hash);
 
@@ -29,7 +42,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validated = fetchSchema.parse(body);
 
-    const chain = validated.chain || detectChainFromTxHash(validated.txHash);
+    const chain = validated.chain || await detectChainFromTxHash(validated.txHash);
     const provider = createProvider(chain);
 
     const tx = await provider.getTransaction(validated.txHash);
@@ -53,7 +66,7 @@ export async function POST(request: Request) {
     }
 
     const amount = parseFloat(transfer.value) / Math.pow(10, parseInt(transfer.tokenDecimal));
-    const usdValue = amount.toFixed(2); // For stablecoins, 1:1 with USD
+    const usdCalc = calculateUsdValue(amount, transfer.tokenSymbol);
 
     return NextResponse.json({
       success: true,
@@ -65,7 +78,8 @@ export async function POST(request: Request) {
         toAddress: transfer.to,
         amount: amount.toString(),
         token: transfer.tokenSymbol,
-        usdValue,
+        usdValue: usdCalc.value,
+        usdIsEstimated: usdCalc.isEstimated,
         date: new Date(parseInt(transfer.timestamp) * 1000).toISOString(),
         blockNumber: transfer.blockNumber,
         gasUsed: transfer.gasUsed,
