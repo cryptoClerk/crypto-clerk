@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createProviderFromEnv } from "@/lib/services/blockchain";
 import { batchCalculateUsdValues } from "@/lib/services/price";
 import { logError } from "@/lib/logger";
+import { prisma } from "@/lib/db";
 
 const statementSchema = z.object({
   walletAddresses: z.array(z.string().min(1)).min(1),
@@ -90,6 +91,23 @@ export async function POST(request: Request) {
 
     // Count how many have prices vs don't
     const pricedCount = formattedTransfers.filter((t: any) => t.usdValue !== null).length;
+
+    // Save to statement history
+    try {
+      await prisma.statement.create({
+        data: {
+          startDate: validated.startDate || new Date().toISOString().split('T')[0],
+          endDate: validated.endDate || new Date().toISOString().split('T')[0],
+          chain: validated.chain,
+          totalTransactions: formattedTransfers.length,
+          totalIncome: totalIncome.toFixed(2),
+          walletCount: validated.walletAddresses.length,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to save statement history:", err);
+      // Don't fail the request if history save fails
+    }
 
     return NextResponse.json({
       success: true,

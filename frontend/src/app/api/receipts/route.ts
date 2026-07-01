@@ -115,6 +115,9 @@ export async function POST(request: Request) {
       },
     });
 
+    // Increment usage counter (if user is logged in, you'd use their userId)
+    // For now, we skip since we're using IP-based tracking
+
     return NextResponse.json(
       { success: true, receipt, usdIsEstimated: usdCalc.isEstimated },
       { headers: getRateLimitHeaders(rateLimit) }

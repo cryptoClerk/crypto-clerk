@@ -10,6 +10,7 @@ export async function GET(
     const { id } = await params;
     const invoice = await prisma.invoice.findUnique({
       where: { id },
+      include: { user: true },
     });
 
     if (!invoice) {
@@ -34,6 +35,18 @@ export async function GET(
       font: fontBold,
       color: rgb(0.1, 0.1, 0.1),
     });
+
+    // Business name if available
+    if (invoice.user?.businessName) {
+      y -= 18;
+      page.drawText(invoice.user.businessName, {
+        x: margin,
+        y,
+        size: 10,
+        font,
+        color: rgb(0.4, 0.4, 0.4),
+      });
+    }
 
     y -= 20;
     page.drawText(invoice.invoiceNumber, {
