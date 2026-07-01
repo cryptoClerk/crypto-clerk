@@ -258,7 +258,7 @@ export async function batchCalculateUsdValues(
     new Array(items.length).fill({ value: null, isEstimated: false, source: "fallback" });
   
   const uniqueEntries = Array.from(uniqueKeys.entries());
-  const cachedResults = new Map<string, { value: string | null; isEstimated: boolean; source: string }>();
+  const cachedResults = new Map<string, { price: string | null; source: string }>();
   let newLookupCount = 0;
   
   // Check cache first
@@ -268,8 +268,7 @@ export async function batchCalculateUsdValues(
     
     if (cached !== undefined) {
       cachedResults.set(key, {
-        value: cached.price,
-        isEstimated: false,
+        price: cached.price,
         source: cached.source,
       });
     } else if (newLookupCount < MAX_NEW_PRICE_LOOKUPS) {
@@ -281,28 +280,55 @@ export async function batchCalculateUsdValues(
   const entriesNeedingLookup = uniqueEntries.filter(([key]) => !cachedResults.has(key));
   const entriesToLookup = entriesNeedingLookup.slice(0, MAX_NEW_PRICE_LOOKUPS);
   
+  // First pass: get unique prices per token+date (price per 1 token unit)
+  const pricePerUnit = new Map<string, { price: string | null; source: string }>();
+  
   await runWithConcurrency(
     entriesToLookup,
-    async ([key, { item, indices }]) => {
-      const result = await calculateUsdValue(
+    async ([key, { item }]) => {
+      // Get price for 1 unit of the token
+      const priceResult = await getHistoricalPrice(
         item.contractAddress,
         item.chain,
         item.symbol,
-        item.amount,
-        item.decimals,
         item.date
       );
       
-      cachedResults.set(key, result);
+      pricePerUnit.set(key, { 
+        price: priceResult.price, 
+        source: priceResult.source 
+      });
     },
     MAX_CONCURRENT_REQUESTS
   );
   
-  // Apply results to all indices
-  for (const [key, { indices }] of uniqueEntries) {
-    const result = cachedResults.get(key) || { value: null, isEstimated: false, source: "skipped" };
+  // Second pass: calculate USD value for each transaction using the cached price
+  for (const [key, { item, indices }] of uniqueEntries) {
+    const cachedPrice = cachedResults.get(key);
+    const fetchedPrice = pricePerUnit.get(key);
+    const priceData = cachedPrice || fetchedPrice;
+    
+    if (!priceData || !priceData.price) {
+      for (const index of indices) {
+        results[index] = { 
+          value: null, 
+          isEstimated: false, 
+          source: priceData?.source || "skipped" 
+        };
+      }
+      continue;
+    }
+    
     for (const index of indices) {
-      results[index] = result;
+      const tx = items[index];
+      const adjustedAmount = parseFloat(tx.amount) / Math.pow(10, tx.decimals);
+      const usdValue = (adjustedAmount * parseFloat(priceData.price)).toFixed(2);
+      
+      results[index] = { 
+        value: usdValue, 
+        isEstimated: priceData.source === "coingecko", // estimated only for CoinGecko
+        source: priceData.source 
+      };
     }
   }
   
