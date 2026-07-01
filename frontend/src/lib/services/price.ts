@@ -1,13 +1,26 @@
-import { prisma } from "@/lib/db";
-
-// CoinGecko free tier: 30 calls/min, 10,000 calls/month
-// Historical data: 365 days max on free tier
-// Older data requires paid plan ($129+/mo)
+// Simple in-memory cache for prices
+const priceCache = new Map<string, { price: string | null; source: string; timestamp: number }>();
+const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
 
 const COINGECKO_API = "https://api.coingecko.com/api/v3";
 const FREE_TIER_DAYS = 365;
-const API_TIMEOUT_MS = 5000; // 5s per CoinGecko call
-const MAX_CONCURRENT_REQUESTS = 5; // don't overwhelm CoinGecko
+const API_TIMEOUT_MS = 5000;
+const MAX_CONCURRENT_REQUESTS = 5;
+const MAX_NEW_PRICE_LOOKUPS = 50;
+
+function getCachedPrice(key: string): { price: string | null; source: string } | undefined {
+  const entry = priceCache.get(key);
+  if (!entry) return undefined;
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+    priceCache.delete(key);
+    return undefined;
+  }
+  return entry;
+}
+
+function setCachedPrice(key: string, price: string | null, source: string) {
+  priceCache.set(key, { price, source, timestamp: Date.now() });
+}
 
 // Well-known CoinGecko IDs for common tokens (avoid extra API calls)
 const KNOWN_COINS: Record<string, string> = {
@@ -66,11 +79,7 @@ async function runWithConcurrency<T>(
 
 /**
  * Look up historical price for a token at a specific date.
- * Checks cache first, then CoinGecko API.
- * Returns null if:
- * - Date is older than FREE_TIER_DAYS
- * - Token not found on CoinGecko
- * - Rate limit exceeded
+ * Checks in-memory cache first, then CoinGecko API.
  */
 export async function getHistoricalPrice(
   contractAddress: string,
@@ -80,29 +89,15 @@ export async function getHistoricalPrice(
 ): Promise<PriceResult> {
   const normalizedAddress = contractAddress.toLowerCase();
   const chainId = chain.toLowerCase();
+  const cacheKey = `${normalizedAddress}-${chainId}-${date}`;
 
-  // 1. Check cache first (gracefully handle missing table)
-  let cached: any = null;
-  try {
-    cached = await prisma.coinPrice.findUnique({
-      where: {
-        contractAddress_chain_date: {
-          contractAddress: normalizedAddress,
-          chain: chainId,
-          date,
-        },
-      },
-    });
-  } catch (err) {
-    // Table might not exist yet — skip cache
-    console.warn("CoinPrice cache lookup failed, table may not exist yet:", err);
-  }
-
-  if (cached) {
+  // 1. Check in-memory cache
+  const cached = getCachedPrice(cacheKey);
+  if (cached !== undefined) {
     return {
-      price: cached.priceUsd,
+      price: cached.price,
       isEstimated: false,
-      isFallback: cached.source === "fallback",
+      isFallback: cached.source === "fallback" || cached.source === "coingecko_limit",
       source: cached.source,
     };
   }
@@ -113,21 +108,7 @@ export async function getHistoricalPrice(
   const daysDiff = Math.floor((today.getTime() - dateObj.getTime()) / (1000 * 60 * 60 * 24));
   
   if (daysDiff > FREE_TIER_DAYS) {
-    // Too old for free tier — store null so we don't retry
-    try {
-      await prisma.coinPrice.create({
-        data: {
-          contractAddress: normalizedAddress,
-          chain: chainId,
-          date,
-          symbol: symbol.toUpperCase(),
-          priceUsd: null,
-          source: "coingecko_limit",
-        },
-      });
-    } catch {
-      // ignore — table might not exist
-    }
+    setCachedPrice(cacheKey, null, "coingecko_limit");
     return { price: null, isEstimated: false, isFallback: true, source: "coingecko_limit" };
   }
 
@@ -136,21 +117,7 @@ export async function getHistoricalPrice(
     const price = await fetchCoinGeckoPrice(normalizedAddress, chainId, symbol, date);
     
     if (price !== null) {
-      try {
-        await prisma.coinPrice.create({
-          data: {
-            contractAddress: normalizedAddress,
-            chain: chainId,
-            date,
-            symbol: symbol.toUpperCase(),
-            coinId: price.coinId,
-            priceUsd: price.priceUsd,
-            source: "coingecko",
-          },
-        });
-      } catch {
-        // ignore — table might not exist
-      }
+      setCachedPrice(cacheKey, price.priceUsd, "coingecko");
       return { price: price.priceUsd, isEstimated: false, isFallback: false, source: "coingecko" };
     }
   } catch (err) {
@@ -158,21 +125,7 @@ export async function getHistoricalPrice(
   }
 
   // 4. Store null in cache to avoid retrying
-  try {
-    await prisma.coinPrice.create({
-      data: {
-        contractAddress: normalizedAddress,
-        chain: chainId,
-        date,
-        symbol: symbol.toUpperCase(),
-        priceUsd: null,
-        source: "fallback",
-      },
-    });
-  } catch {
-    // ignore — table might not exist
-  }
-
+  setCachedPrice(cacheKey, null, "fallback");
   return { price: null, isEstimated: false, isFallback: true, source: "fallback" };
 }
 
@@ -186,7 +139,6 @@ async function fetchCoinGeckoPrice(
   let coinId = KNOWN_COINS[contractAddress];
   
   if (!coinId) {
-    // Try to look up by contract address
     const platformMap: Record<string, string> = {
       "ethereum": "ethereum",
       "polygon": "polygon-pos",
@@ -209,7 +161,7 @@ async function fetchCoinGeckoPrice(
         coinId = data.id;
       }
     } catch (err) {
-      console.warn(`Failed to look up CoinGecko coin ID for ${contractAddress} on ${platform}:`, err);
+      console.warn(`Failed to look up CoinGecko coin ID for ${contractAddress}:`, err);
     }
   }
   
@@ -218,7 +170,6 @@ async function fetchCoinGeckoPrice(
   }
 
   // Step 2: Get historical price at the date
-  // CoinGecko /history endpoint: date in DD-MM-YYYY format
   const dateParts = date.split("-");
   const cgDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
   
@@ -246,17 +197,15 @@ async function fetchCoinGeckoPrice(
 
 /**
  * Calculate USD value for a transaction amount.
- * Uses historical price if available, otherwise returns null.
  */
 export async function calculateUsdValue(
   contractAddress: string,
   chain: string,
   symbol: string,
-  amount: string, // raw token amount (not adjusted for decimals)
+  amount: string,
   decimals: number,
   date: string
 ): Promise<{ value: string | null; isEstimated: boolean; source: string }> {
-  // Stablecoins are always 1:1
   const upperSymbol = symbol.toUpperCase();
   const STABLECOINS = ["USDC", "USDT", "DAI", "BUSD", "TUSD", "USDP", "FDUSD", "GUSD"];
   
@@ -265,31 +214,24 @@ export async function calculateUsdValue(
     return { value, isEstimated: false, source: "stablecoin" };
   }
   
-  // Get historical price
   const priceResult = await getHistoricalPrice(contractAddress, chain, symbol, date);
   
   if (!priceResult.price) {
     return { value: null, isEstimated: false, source: priceResult.source };
   }
   
-  // Calculate: amount * price / 10^decimals
   const adjustedAmount = parseFloat(amount) / Math.pow(10, decimals);
   const usdValue = (adjustedAmount * parseFloat(priceResult.price)).toFixed(2);
   
   return { 
     value: usdValue, 
-    isEstimated: true, // CoinGecko prices are estimates (market average)
+    isEstimated: true,
     source: priceResult.source 
   };
 }
 
-// Max new CoinGecko API calls per request to stay within serverless timeout
-const MAX_NEW_PRICE_LOOKUPS = 50;
-
 /**
- * Batch fetch prices for multiple transactions with concurrency control.
- * Group by unique token + date to minimize API calls.
- * Limits new API calls to MAX_NEW_PRICE_LOOKUPS to avoid serverless timeouts.
+ * Batch fetch prices with concurrency control and lookup limits.
  */
 export async function batchCalculateUsdValues(
   items: Array<{
@@ -301,7 +243,7 @@ export async function batchCalculateUsdValues(
     date: string;
   }>
 ): Promise<Array<{ value: string | null; isEstimated: boolean; source: string }>> {
-  // Group by unique (contractAddress, chain, date) to minimize API calls
+  // Group by unique (contractAddress, chain, date)
   const uniqueKeys = new Map<string, { item: typeof items[0]; indices: number[] }>();
   
   items.forEach((item, index) => {
@@ -315,30 +257,18 @@ export async function batchCalculateUsdValues(
   const results: Array<{ value: string | null; isEstimated: boolean; source: string }> = 
     new Array(items.length).fill({ value: null, isEstimated: false, source: "fallback" });
   
-  // Check cache first for all unique combinations
   const uniqueEntries = Array.from(uniqueKeys.entries());
   const cachedResults = new Map<string, { value: string | null; isEstimated: boolean; source: string }>();
   let newLookupCount = 0;
   
+  // Check cache first
   for (const [key, { item }] of uniqueEntries) {
-    let cached: any = null;
-    try {
-      cached = await prisma.coinPrice.findUnique({
-        where: {
-          contractAddress_chain_date: {
-            contractAddress: item.contractAddress.toLowerCase(),
-            chain: item.chain.toLowerCase(),
-            date: item.date,
-          },
-        },
-      });
-    } catch {
-      // Table might not exist yet — skip cache
-    }
+    const cacheKey = `${item.contractAddress.toLowerCase()}-${item.chain.toLowerCase()}-${item.date}`;
+    const cached = getCachedPrice(cacheKey);
     
-    if (cached) {
+    if (cached !== undefined) {
       cachedResults.set(key, {
-        value: cached.priceUsd,
+        value: cached.price,
         isEstimated: false,
         source: cached.source,
       });
@@ -347,10 +277,9 @@ export async function batchCalculateUsdValues(
     }
   }
   
-  // Process only the ones that need new API calls, up to the limit
+  // Process only the ones that need new API calls
   const entriesNeedingLookup = uniqueEntries.filter(([key]) => !cachedResults.has(key));
   const entriesToLookup = entriesNeedingLookup.slice(0, MAX_NEW_PRICE_LOOKUPS);
-  const skippedEntries = entriesNeedingLookup.slice(MAX_NEW_PRICE_LOOKUPS);
   
   await runWithConcurrency(
     entriesToLookup,
