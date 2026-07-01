@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,11 +25,30 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
   const [token, setToken] = useState('USDC');
   const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState('');
+
+  useEffect(() => {
+    fetchInvoices();
+  }, []);
+
+  const fetchInvoices = async () => {
+    try {
+      const res = await fetch('/api/invoices');
+      const data = await res.json();
+      if (data.success) {
+        setInvoices(data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching invoices:', err);
+    } finally {
+      setFetching(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,7 +201,14 @@ export default function InvoicesPage() {
         </Card>
       )}
 
-      {invoices.length > 0 ? (
+      {fetching ? (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-4" />
+            <p className="text-slate-500">Loading invoices...</p>
+          </CardContent>
+        </Card>
+      ) : invoices.length > 0 ? (
         <div className="space-y-4">
           {invoices.map((invoice) => (
             <Card key={invoice.id} className="hover:shadow-md transition-shadow">
