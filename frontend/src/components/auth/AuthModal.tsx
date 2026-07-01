@@ -17,6 +17,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   if (!isOpen) return null;
 
@@ -44,7 +45,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       if (mode === "signup") {
         const { error } = await supabase!.auth.signUp({ email, password });
         if (error) throw error;
-        // Show success message
+        setSuccess("Check your email! We've sent you a confirmation link.");
       } else {
         const { error } = await supabase!.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -72,36 +73,55 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+        {success && (
+          <div className="bg-green-50 text-green-700 p-4 rounded mb-4 text-sm text-center">
+            <div className="text-2xl mb-2">✉️</div>
+            <p className="font-medium">{success}</p>
+            <p className="text-green-600 mt-1">Click the link in your email to verify your account, then sign in.</p>
           </div>
-          <div>
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+        )}
+
+        {!success ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading ? "Loading..." : mode === "signin" ? "Sign In" : "Sign Up"}
+            </Button>
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <Button onClick={() => { setSuccess(""); setMode("signin"); }} className="w-full">
+              Go to Sign In
+            </Button>
+            <Button onClick={onClose} variant="outline" className="w-full">
+              Close
+            </Button>
           </div>
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Loading..." : mode === "signin" ? "Sign In" : "Sign Up"}
-          </Button>
-        </form>
+        )}
 
         <p className="mt-4 text-center text-sm text-slate-600">
           {mode === "signin" ? (
             <>
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <button onClick={() => setMode("signup")} className="text-blue-600 underline">
                 Sign Up
               </button>
@@ -109,7 +129,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           ) : (
             <>
               Already have an account?{" "}
-              <button onClick={() => setMode("signin")} className="text-blue-600 underline">
+              <button onClick={() => { setSuccess(""); setMode("signin"); }} className="text-blue-600 underline">
                 Sign In
               </button>
             </>
