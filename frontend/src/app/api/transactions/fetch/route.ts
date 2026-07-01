@@ -61,7 +61,11 @@ export async function POST(request: Request) {
 
     if (!transfer) {
       return NextResponse.json(
-        { error: "No token transfer found in this transaction. Make sure it's an ERC-20 transfer (USDC, USDT, DAI, etc.)", errorType: "NOT_TOKEN_TRANSFER" },
+        { 
+          error: "No ERC-20 token transfer found. This app only works with USDC, USDT, DAI, and other token transfers. Regular ETH transfers are not supported.", 
+          errorType: "NOT_TOKEN_TRANSFER",
+          help: "Find a USDC transfer at https://etherscan.io/token/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48#tokentxns"
+        },
         { status: 404, headers: getRateLimitHeaders(rateLimit) }
       );
     }
