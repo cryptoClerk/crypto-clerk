@@ -93,6 +93,9 @@ export default function StatementsPage() {
   const [statement, setStatement] = useState<StatementData | null>(null);
   const [error, setError] = useState('');
 
+  const [manualAddress, setManualAddress] = useState('');
+  const [useManualAddress, setUseManualAddress] = useState(false);
+
   const fetchWallets = useCallback(async () => {
     try {
       const res = await fetch('/api/wallets');
@@ -118,8 +121,19 @@ export default function StatementsPage() {
   };
 
   const handleGenerate = async () => {
-    if (selectedWallets.length === 0) {
-      setError('Please select at least one wallet');
+    const addressesToUse: string[] = [];
+
+    if (useManualAddress && manualAddress.trim()) {
+      // Validate Ethereum address
+      if (!/^0x[a-fA-F0-9]{40}$/.test(manualAddress.trim())) {
+        setError('Invalid Ethereum address format');
+        return;
+      }
+      addressesToUse.push(manualAddress.trim().toLowerCase());
+    } else if (selectedWallets.length > 0) {
+      addressesToUse.push(...selectedWallets);
+    } else {
+      setError('Please select at least one wallet or enter an address');
       return;
     }
 
@@ -149,7 +163,7 @@ export default function StatementsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          walletAddresses: selectedWallets,
+          walletAddresses: addressesToUse,
           startDate,
           endDate,
         }),
@@ -235,11 +249,31 @@ export default function StatementsPage() {
           {/* Wallet Selection */}
           <div className="space-y-3">
             <Label>Select Wallets</Label>
-            {wallets.length === 0 ? (
-              <p className="text-sm text-slate-500">
-                No wallets added. <a href="/dashboard/wallets" className="text-blue-600 hover:underline">Add wallets first</a>.
-              </p>
-            ) : (
+            
+            {/* Manual address input */}
+            <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-slate-50">
+              <Checkbox
+                id="manual-wallet"
+                checked={useManualAddress}
+                onCheckedChange={(checked) => setUseManualAddress(checked === true)}
+              />
+              <div className="flex-1">
+                <Label htmlFor="manual-wallet" className="cursor-pointer font-medium">
+                  Use a wallet address
+                </Label>
+                {useManualAddress && (
+                  <Input
+                    placeholder="0x..."
+                    value={manualAddress}
+                    onChange={(e) => setManualAddress(e.target.value)}
+                    className="mt-2 font-mono text-sm"
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Saved wallets */}
+            {wallets.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {wallets.map((wallet) => (
                   <div
@@ -250,10 +284,11 @@ export default function StatementsPage() {
                       id={`wallet-${wallet.id}`}
                       checked={selectedWallets.includes(wallet.address)}
                       onCheckedChange={() => toggleWallet(wallet.address)}
+                      disabled={useManualAddress}
                     />
                     <Label
                       htmlFor={`wallet-${wallet.id}`}
-                      className="flex-1 cursor-pointer"
+                      className={`flex-1 cursor-pointer ${useManualAddress ? 'opacity-50' : ''}`}
                     >
                       <div className="font-medium">{wallet.label || formatAddress(wallet.address)}</div>
                       <div className="text-sm text-slate-500 font-mono">{formatAddress(wallet.address)}</div>
@@ -262,6 +297,12 @@ export default function StatementsPage() {
                   </div>
                 ))}
               </div>
+            )}
+            
+            {wallets.length === 0 && !useManualAddress && (
+              <p className="text-sm text-slate-500">
+                No saved wallets. Use the option above or <a href="/dashboard/wallets" className="text-blue-600 hover:underline">save wallets</a> for quick access.
+              </p>
             )}
           </div>
 
@@ -309,7 +350,7 @@ export default function StatementsPage() {
 
           <Button
             onClick={handleGenerate}
-            disabled={loading || wallets.length === 0}
+            disabled={loading}
             className="bg-blue-600 hover:bg-blue-700"
           >
             {loading ? 'Generating...' : 'Generate Statement'}
