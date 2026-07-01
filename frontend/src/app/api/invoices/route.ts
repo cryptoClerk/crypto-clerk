@@ -6,17 +6,9 @@ import { logError } from "@/lib/logger";
 const invoiceSchema = z.object({
   clientName: z.string().min(1),
   clientEmail: z.string().email().optional(),
-  lineItems: z.array(
-    z.object({
-      description: z.string().min(1),
-      quantity: z.number().min(0.01),
-      rate: z.number().min(0.01),
-    })
-  ).min(1),
+  amount: z.string().min(1),
   token: z.string().min(1),
-  dueDate: z.string().optional(), // ISO date string
-  paymentAddress: z.string().min(1),
-  notes: z.string().optional(),
+  dueDate: z.string().optional(),
   userId: z.string().optional(),
 });
 
@@ -25,25 +17,17 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validated = invoiceSchema.parse(body);
 
-    const total = validated.lineItems.reduce(
-      (sum, item) => sum + item.quantity * item.rate,
-      0
-    );
-
     const invoice = await prisma.invoice.create({
       data: {
         invoiceNumber: await generateInvoiceNumber(),
         clientName: validated.clientName,
         clientEmail: validated.clientEmail,
-        amount: total.toString(),
+        amount: validated.amount,
         token: validated.token,
         dueDate: validated.dueDate ? new Date(validated.dueDate) : null,
         paymentTxHash: null,
         pdfUrl: null,
         userId: validated.userId || null,
-        lineItems: validated.lineItems as any,
-        paymentAddress: validated.paymentAddress,
-        notes: validated.notes,
       },
     });
 

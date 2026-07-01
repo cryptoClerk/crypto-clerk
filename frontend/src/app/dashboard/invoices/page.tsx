@@ -8,12 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2, FileText } from 'lucide-react';
 import Link from 'next/link';
 
-interface LineItem {
-  description: string;
-  quantity: number;
-  rate: number;
-}
-
 interface Invoice {
   id: string;
   invoiceNumber: string;
@@ -34,30 +28,8 @@ export default function InvoicesPage() {
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
   const [token, setToken] = useState('USDC');
+  const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [paymentAddress, setPaymentAddress] = useState('');
-  const [notes, setNotes] = useState('');
-  const [lineItems, setLineItems] = useState<LineItem[]>([
-    { description: '', quantity: 1, rate: 0 },
-  ]);
-
-  const total = lineItems.reduce((sum, item) => sum + item.quantity * item.rate, 0);
-
-  const addLineItem = () => {
-    setLineItems([...lineItems, { description: '', quantity: 1, rate: 0 }]);
-  };
-
-  const updateLineItem = (index: number, field: keyof LineItem, value: string | number) => {
-    const updated = [...lineItems];
-    updated[index] = { ...updated[index], [field]: value };
-    setLineItems(updated);
-  };
-
-  const removeLineItem = (index: number) => {
-    if (lineItems.length > 1) {
-      setLineItems(lineItems.filter((_, i) => i !== index));
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,11 +42,9 @@ export default function InvoicesPage() {
         body: JSON.stringify({
           clientName,
           clientEmail,
-          lineItems,
+          amount,
           token,
           dueDate,
-          paymentAddress,
-          notes,
         }),
       });
 
@@ -98,10 +68,8 @@ export default function InvoicesPage() {
     setClientName('');
     setClientEmail('');
     setToken('USDC');
+    setAmount('');
     setDueDate('');
-    setPaymentAddress('');
-    setNotes('');
-    setLineItems([{ description: '', quantity: 1, rate: 0 }]);
   };
 
   const getStatusColor = (status: string) => {
@@ -172,9 +140,19 @@ export default function InvoicesPage() {
                     <option value="USDT">USDT</option>
                     <option value="DAI">DAI</option>
                     <option value="ETH">ETH</option>
-                    <option value="MATIC">MATIC</option>
-                    <option value="BNB">BNB</option>
                   </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Amount</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    step="0.01"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="5000.00"
+                    required
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="dueDate">Due Date</Label>
@@ -185,80 +163,15 @@ export default function InvoicesPage() {
                     onChange={(e) => setDueDate(e.target.value)}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="paymentAddress">Payment Address</Label>
-                  <Input
-                    id="paymentAddress"
-                    value={paymentAddress}
-                    onChange={(e) => setPaymentAddress(e.target.value)}
-                    placeholder="0x..."
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <Label>Line Items</Label>
-                {lineItems.map((item, index) => (
-                  <div key={index} className="grid md:grid-cols-4 gap-2 items-end">
-                    <div className="md:col-span-2">
-                      <Input
-                        value={item.description}
-                        onChange={(e) => updateLineItem(index, 'description', e.target.value)}
-                        placeholder="Web development"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={item.quantity || ''}
-                        onChange={(e) => updateLineItem(index, 'quantity', parseFloat(e.target.value) || 0)}
-                        placeholder="Qty"
-                        required
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={item.rate || ''}
-                        onChange={(e) => updateLineItem(index, 'rate', parseFloat(e.target.value) || 0)}
-                        placeholder="Rate"
-                        required
-                      />
-                      {lineItems.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeLineItem(index)}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={addLineItem}
-                  className="w-full"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Line Item
-                </Button>
               </div>
 
               <div className="flex justify-between items-center pt-4 border-t">
                 <div className="text-sm text-slate-600">
-                  <div>Total: <strong className="text-lg">{total.toFixed(2)} {token}</strong></div>
+                  <div>Total: <strong className="text-lg">{amount || '0'} {token}</strong></div>
                 </div>
                 <Button
                   type="submit"
-                  disabled={loading || total <= 0}
+                  disabled={loading || !amount}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   {loading ? 'Creating...' : 'Create Invoice'}

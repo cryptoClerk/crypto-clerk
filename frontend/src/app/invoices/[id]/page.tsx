@@ -126,34 +126,9 @@ export default async function InvoiceDetailPage({ params }: Props) {
               <div className="bg-blue-50 rounded-lg p-4">
                 <h3 className="font-semibold text-blue-900 mb-2">Payment Instructions</h3>
                 <p className="text-sm text-blue-800">
-                  Please send exactly {invoice.amount} {invoice.token} to the wallet address below.
-                  Once payment is confirmed, share the transaction hash with the invoice sender.
+                  Please send exactly {invoice.amount} {invoice.token} to the wallet address provided by the invoice sender.
+                  Once payment is confirmed, share the transaction hash to mark this invoice as paid.
                 </p>
-                {invoice.paymentAddress && (
-                  <div className="mt-3 p-3 bg-white rounded border border-blue-200">
-                    <p className="text-xs text-slate-500 mb-1">Payment Address</p>
-                    <p className="font-mono text-sm break-all">{invoice.paymentAddress}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {invoice.lineItems && (
-            <div className="border-t pt-6">
-              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Line Items</h3>
-              <div className="space-y-2">
-                {(invoice.lineItems as any[]).map((item: any, index: number) => (
-                  <div key={index} className="flex justify-between items-center py-2 border-b border-slate-100">
-                    <div>
-                      <p className="font-medium">{item.description}</p>
-                      <p className="text-sm text-slate-500">{item.quantity} × {item.rate} {invoice.token}</p>
-                    </div>
-                    <p className="font-medium">
-                      {(item.quantity * item.rate).toFixed(2)} {invoice.token}
-                    </p>
-                  </div>
-                ))}
               </div>
             </div>
           )}
