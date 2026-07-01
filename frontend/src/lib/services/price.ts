@@ -6,6 +6,8 @@ import { prisma } from "@/lib/db";
 
 const COINGECKO_API = "https://api.coingecko.com/api/v3";
 const FREE_TIER_DAYS = 365;
+const API_TIMEOUT_MS = 5000; // 5s per CoinGecko call
+const MAX_CONCURRENT_REQUESTS = 5; // don't overwhelm CoinGecko
 
 // Well-known CoinGecko IDs for common tokens (avoid extra API calls)
 const KNOWN_COINS: Record<string, string> = {
@@ -32,6 +34,34 @@ interface PriceResult {
   isEstimated: boolean;
   isFallback: boolean;
   source: string;
+}
+
+async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: controller.signal, next: { revalidate: 86400 } });
+    return res;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function runWithConcurrency<T>(
+  items: T[],
+  fn: (item: T) => Promise<void>,
+  concurrency: number
+): Promise<void> {
+  const executing: Promise<void>[] = [];
+  for (const item of items) {
+    const p = fn(item);
+    executing.push(p);
+    if (executing.length >= concurrency) {
+      await Promise.race(executing);
+      executing.splice(executing.findIndex(ep => ep === p), 1);
+    }
+  }
+  await Promise.all(executing);
 }
 
 /**
@@ -87,11 +117,11 @@ export async function getHistoricalPrice(
         priceUsd: null,
         source: "coingecko_limit",
       },
-    });
+    }).catch(() => {}); // ignore duplicate errors
     return { price: null, isEstimated: false, isFallback: true, source: "coingecko_limit" };
   }
 
-  // 3. Try CoinGecko API
+  // 3. Try CoinGecko API with timeout
   try {
     const price = await fetchCoinGeckoPrice(normalizedAddress, chainId, symbol, date);
     
@@ -106,7 +136,7 @@ export async function getHistoricalPrice(
           priceUsd: price.priceUsd,
           source: "coingecko",
         },
-      });
+      }).catch(() => {}); // ignore duplicate errors
       return { price: price.priceUsd, isEstimated: false, isFallback: false, source: "coingecko" };
     }
   } catch (err) {
@@ -123,7 +153,7 @@ export async function getHistoricalPrice(
       priceUsd: null,
       source: "fallback",
     },
-  });
+  }).catch(() => {}); // ignore duplicate errors
 
   return { price: null, isEstimated: false, isFallback: true, source: "fallback" };
 }
@@ -151,9 +181,9 @@ async function fetchCoinGeckoPrice(
     const platform = platformMap[chain] || chain;
     
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `${COINGECKO_API}/coins/${platform}/contract/${contractAddress}`,
-        { next: { revalidate: 86400 } } // cache for 24 hours
+        API_TIMEOUT_MS
       );
       
       if (res.ok) {
@@ -174,9 +204,9 @@ async function fetchCoinGeckoPrice(
   const dateParts = date.split("-");
   const cgDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
   
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `${COINGECKO_API}/coins/${coinId}/history?date=${cgDate}&localization=false`,
-    { next: { revalidate: 86400 } }
+    API_TIMEOUT_MS
   );
   
   if (!res.ok) {
@@ -235,9 +265,13 @@ export async function calculateUsdValue(
   };
 }
 
+// Max new CoinGecko API calls per request to stay within serverless timeout
+const MAX_NEW_PRICE_LOOKUPS = 50;
+
 /**
- * Batch fetch prices for multiple transactions to minimize API calls.
- * Group by unique token + date combinations.
+ * Batch fetch prices for multiple transactions with concurrency control.
+ * Group by unique token + date to minimize API calls.
+ * Limits new API calls to MAX_NEW_PRICE_LOOKUPS to avoid serverless timeouts.
  */
 export async function batchCalculateUsdValues(
   items: Array<{
@@ -249,18 +283,76 @@ export async function batchCalculateUsdValues(
     date: string;
   }>
 ): Promise<Array<{ value: string | null; isEstimated: boolean; source: string }>> {
-  const results = await Promise.all(
-    items.map(item => 
-      calculateUsdValue(
+  // Group by unique (contractAddress, chain, date) to minimize API calls
+  const uniqueKeys = new Map<string, { item: typeof items[0]; indices: number[] }>();
+  
+  items.forEach((item, index) => {
+    const key = `${item.contractAddress.toLowerCase()}-${item.chain.toLowerCase()}-${item.date}`;
+    if (!uniqueKeys.has(key)) {
+      uniqueKeys.set(key, { item, indices: [] });
+    }
+    uniqueKeys.get(key)!.indices.push(index);
+  });
+  
+  const results: Array<{ value: string | null; isEstimated: boolean; source: string }> = 
+    new Array(items.length).fill({ value: null, isEstimated: false, source: "fallback" });
+  
+  // Check cache first for all unique combinations
+  const uniqueEntries = Array.from(uniqueKeys.entries());
+  const cachedResults = new Map<string, { value: string | null; isEstimated: boolean; source: string }>();
+  let newLookupCount = 0;
+  
+  for (const [key, { item }] of uniqueEntries) {
+    const cached = await prisma.coinPrice.findUnique({
+      where: {
+        contractAddress_chain_date: {
+          contractAddress: item.contractAddress.toLowerCase(),
+          chain: item.chain.toLowerCase(),
+          date: item.date,
+        },
+      },
+    });
+    
+    if (cached) {
+      cachedResults.set(key, {
+        value: cached.priceUsd,
+        isEstimated: false,
+        source: cached.source,
+      });
+    } else if (newLookupCount < MAX_NEW_PRICE_LOOKUPS) {
+      newLookupCount++;
+    }
+  }
+  
+  // Process only the ones that need new API calls, up to the limit
+  const entriesNeedingLookup = uniqueEntries.filter(([key]) => !cachedResults.has(key));
+  const entriesToLookup = entriesNeedingLookup.slice(0, MAX_NEW_PRICE_LOOKUPS);
+  const skippedEntries = entriesNeedingLookup.slice(MAX_NEW_PRICE_LOOKUPS);
+  
+  await runWithConcurrency(
+    entriesToLookup,
+    async ([key, { item, indices }]) => {
+      const result = await calculateUsdValue(
         item.contractAddress,
         item.chain,
         item.symbol,
         item.amount,
         item.decimals,
         item.date
-      )
-    )
+      );
+      
+      cachedResults.set(key, result);
+    },
+    MAX_CONCURRENT_REQUESTS
   );
+  
+  // Apply results to all indices
+  for (const [key, { indices }] of uniqueEntries) {
+    const result = cachedResults.get(key) || { value: null, isEstimated: false, source: "skipped" };
+    for (const index of indices) {
+      results[index] = result;
+    }
+  }
   
   return results;
 }
