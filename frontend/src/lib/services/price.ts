@@ -81,16 +81,22 @@ export async function getHistoricalPrice(
   const normalizedAddress = contractAddress.toLowerCase();
   const chainId = chain.toLowerCase();
 
-  // 1. Check cache first
-  const cached = await prisma.coinPrice.findUnique({
-    where: {
-      contractAddress_chain_date: {
-        contractAddress: normalizedAddress,
-        chain: chainId,
-        date,
+  // 1. Check cache first (gracefully handle missing table)
+  let cached: any = null;
+  try {
+    cached = await prisma.coinPrice.findUnique({
+      where: {
+        contractAddress_chain_date: {
+          contractAddress: normalizedAddress,
+          chain: chainId,
+          date,
+        },
       },
-    },
-  });
+    });
+  } catch (err) {
+    // Table might not exist yet — skip cache
+    console.warn("CoinPrice cache lookup failed, table may not exist yet:", err);
+  }
 
   if (cached) {
     return {
@@ -108,16 +114,20 @@ export async function getHistoricalPrice(
   
   if (daysDiff > FREE_TIER_DAYS) {
     // Too old for free tier — store null so we don't retry
-    await prisma.coinPrice.create({
-      data: {
-        contractAddress: normalizedAddress,
-        chain: chainId,
-        date,
-        symbol: symbol.toUpperCase(),
-        priceUsd: null,
-        source: "coingecko_limit",
-      },
-    }).catch(() => {}); // ignore duplicate errors
+    try {
+      await prisma.coinPrice.create({
+        data: {
+          contractAddress: normalizedAddress,
+          chain: chainId,
+          date,
+          symbol: symbol.toUpperCase(),
+          priceUsd: null,
+          source: "coingecko_limit",
+        },
+      });
+    } catch {
+      // ignore — table might not exist
+    }
     return { price: null, isEstimated: false, isFallback: true, source: "coingecko_limit" };
   }
 
@@ -126,17 +136,21 @@ export async function getHistoricalPrice(
     const price = await fetchCoinGeckoPrice(normalizedAddress, chainId, symbol, date);
     
     if (price !== null) {
-      await prisma.coinPrice.create({
-        data: {
-          contractAddress: normalizedAddress,
-          chain: chainId,
-          date,
-          symbol: symbol.toUpperCase(),
-          coinId: price.coinId,
-          priceUsd: price.priceUsd,
-          source: "coingecko",
-        },
-      }).catch(() => {}); // ignore duplicate errors
+      try {
+        await prisma.coinPrice.create({
+          data: {
+            contractAddress: normalizedAddress,
+            chain: chainId,
+            date,
+            symbol: symbol.toUpperCase(),
+            coinId: price.coinId,
+            priceUsd: price.priceUsd,
+            source: "coingecko",
+          },
+        });
+      } catch {
+        // ignore — table might not exist
+      }
       return { price: price.priceUsd, isEstimated: false, isFallback: false, source: "coingecko" };
     }
   } catch (err) {
@@ -144,16 +158,20 @@ export async function getHistoricalPrice(
   }
 
   // 4. Store null in cache to avoid retrying
-  await prisma.coinPrice.create({
-    data: {
-      contractAddress: normalizedAddress,
-      chain: chainId,
-      date,
-      symbol: symbol.toUpperCase(),
-      priceUsd: null,
-      source: "fallback",
-    },
-  }).catch(() => {}); // ignore duplicate errors
+  try {
+    await prisma.coinPrice.create({
+      data: {
+        contractAddress: normalizedAddress,
+        chain: chainId,
+        date,
+        symbol: symbol.toUpperCase(),
+        priceUsd: null,
+        source: "fallback",
+      },
+    });
+  } catch {
+    // ignore — table might not exist
+  }
 
   return { price: null, isEstimated: false, isFallback: true, source: "fallback" };
 }
@@ -303,15 +321,20 @@ export async function batchCalculateUsdValues(
   let newLookupCount = 0;
   
   for (const [key, { item }] of uniqueEntries) {
-    const cached = await prisma.coinPrice.findUnique({
-      where: {
-        contractAddress_chain_date: {
-          contractAddress: item.contractAddress.toLowerCase(),
-          chain: item.chain.toLowerCase(),
-          date: item.date,
+    let cached: any = null;
+    try {
+      cached = await prisma.coinPrice.findUnique({
+        where: {
+          contractAddress_chain_date: {
+            contractAddress: item.contractAddress.toLowerCase(),
+            chain: item.chain.toLowerCase(),
+            date: item.date,
+          },
         },
-      },
-    });
+      });
+    } catch {
+      // Table might not exist yet — skip cache
+    }
     
     if (cached) {
       cachedResults.set(key, {
