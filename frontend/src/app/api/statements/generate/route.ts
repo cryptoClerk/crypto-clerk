@@ -1,20 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createProviderFromEnv } from "@/lib/services/blockchain";
+import { batchCalculateUsdValues } from "@/lib/services/price";
 import { logError } from "@/lib/logger";
-
-// Known stablecoins that are ~1:1 with USD
-const STABLECOINS = ['USDC', 'USDT', 'DAI', 'BUSD', 'TUSD', 'USDP'];
-
-function calculateUsdValue(amount: number, tokenSymbol: string): { value: string; isEstimated: boolean } {
-  const upperToken = tokenSymbol.toUpperCase();
-  if (STABLECOINS.includes(upperToken)) {
-    return { value: amount.toFixed(2), isEstimated: false };
-  }
-  // For non-stablecoins, return raw amount with a flag indicating it's not USD
-  // TODO: Integrate CoinGecko API for real-time/historical prices
-  return { value: amount.toFixed(6), isEstimated: true };
-}
 
 const statementSchema = z.object({
   walletAddresses: z.array(z.string().min(1)).min(1),
@@ -60,10 +48,23 @@ export async function POST(request: Request) {
     // Sort by timestamp (newest first)
     allTransfers.sort((a, b) => parseInt(b.timestamp) - parseInt(a.timestamp));
 
-    // Calculate USD values and format
-    const formattedTransfers = allTransfers.map((t: any) => {
-      const amount = parseFloat(t.value) / Math.pow(10, parseInt(t.tokenDecimal));
-      const usdCalc = calculateUsdValue(amount, t.tokenSymbol);
+    // Prepare price lookup items
+    const priceItems = allTransfers.map((t: any) => ({
+      contractAddress: t.contractAddress || "0x0000000000000000000000000000000000000000",
+      chain: validated.chain,
+      symbol: t.tokenSymbol,
+      amount: t.value,
+      decimals: parseInt(t.tokenDecimal) || 18,
+      date: new Date(parseInt(t.timestamp) * 1000).toISOString().split('T')[0],
+    }));
+
+    // Calculate USD values (with caching)
+    const priceResults = await batchCalculateUsdValues(priceItems);
+
+    // Format transfers with USD values
+    const formattedTransfers = allTransfers.map((t: any, index: number) => {
+      const priceResult = priceResults[index];
+      const amount = parseFloat(t.value) / Math.pow(10, parseInt(t.tokenDecimal) || 18);
       
       return {
         txHash: t.txHash,
@@ -72,25 +73,30 @@ export async function POST(request: Request) {
         to: t.to,
         amount: amount.toString(),
         token: t.tokenSymbol,
-        usdValue: usdCalc.value,
-        usdIsEstimated: usdCalc.isEstimated,
+        usdValue: priceResult.value || null,
+        usdIsEstimated: priceResult.isEstimated,
+        priceSource: priceResult.source,
         walletAddress: t.walletAddress,
       };
     });
 
-    // Calculate totals (only sum stablecoin values for accurate totals)
+    // Calculate totals (sum all transactions with valid USD values)
     const totalIncome = formattedTransfers.reduce((sum, t) => {
-      if (!t.usdIsEstimated) {
+      if (t.usdValue !== null) {
         return sum + parseFloat(t.usdValue);
       }
       return sum;
     }, 0);
+
+    // Count how many have prices vs don't
+    const pricedCount = formattedTransfers.filter((t: any) => t.usdValue !== null).length;
 
     return NextResponse.json({
       success: true,
       data: {
         transactions: formattedTransfers,
         totalTransactions: formattedTransfers.length,
+        pricedTransactions: pricedCount,
         totalIncome: totalIncome.toFixed(2),
         walletCount: validated.walletAddresses.length,
         startDate: validated.startDate,

@@ -79,6 +79,21 @@ model Invoice {
   createdAt       DateTime @default(now())
 }
 
+model CoinPrice {
+  id              String   @id @default(uuid())
+  contractAddress String   // lowercase
+  chain           String   // ethereum, polygon, etc.
+  date            String   // YYYY-MM-DD
+  coinId          String?  // CoinGecko coin ID (e.g., "ethereum")
+  symbol          String?  // token symbol (e.g., "ETH")
+  priceUsd        String?  // price in USD at that date, null if not found
+  source          String   @default("coingecko") // coingecko, fallback, manual
+  fetchedAt       DateTime @default(now())
+  
+  @@unique([contractAddress, chain, date])
+  @@index([contractAddress, chain, date])
+}
+
 model ApiKey {
   id        String   @id @default(uuid())
   key       String   @unique

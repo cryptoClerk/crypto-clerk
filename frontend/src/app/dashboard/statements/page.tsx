@@ -29,14 +29,16 @@ interface Transaction {
   to: string;
   amount: string;
   token: string;
-  usdValue: string;
+  usdValue: string | null;
   usdIsEstimated?: boolean;
+  priceSource?: string;
   walletAddress: string;
 }
 
 interface StatementData {
   transactions: Transaction[];
   totalTransactions: number;
+  pricedTransactions: number;
   totalIncome: string;
   walletCount: number;
   startDate?: string;
@@ -188,14 +190,13 @@ export default function StatementsPage() {
     if (!statement) return;
 
     const escapeCSV = (field: string) => {
-      // If field contains comma, quote, or newline, wrap in quotes and escape existing quotes
-      if (/[\",\n]/.test(field)) {
+      if (/[",\n]/.test(field)) {
         return `"${field.replace(/"/g, '""')}"`;
       }
       return field;
     };
 
-    const headers = ['Date', 'Transaction Hash', 'From', 'To', 'Token', 'Amount', 'USD Value', 'Wallet'];
+    const headers = ['Date', 'Transaction Hash', 'From', 'To', 'Token', 'Amount', 'USD Value', 'Price Source', 'Wallet'];
     const rows = statement.transactions.map((t) => [
       new Date(t.date).toISOString(),
       t.txHash,
@@ -203,7 +204,8 @@ export default function StatementsPage() {
       t.to,
       t.token,
       t.amount,
-      t.usdValue,
+      t.usdValue || '—',
+      t.priceSource || '—',
       t.walletAddress,
     ]);
 
@@ -220,7 +222,6 @@ export default function StatementsPage() {
     document.body.appendChild(a);
     a.click();
     
-    // Delay revoke to ensure download starts
     setTimeout(() => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
@@ -231,6 +232,8 @@ export default function StatementsPage() {
     if (addr.length < 12) return addr;
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
+
+  const unpricedCount = statement ? statement.totalTransactions - statement.pricedTransactions : 0;
 
   return (
     <div className="space-y-6">
@@ -365,9 +368,17 @@ export default function StatementsPage() {
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-xl font-semibold">Statement Preview</h2>
-              <p className="text-sm text-slate-500">
-                {statement.totalTransactions} transactions • ${statement.totalIncome} total
-              </p>
+              <div className="text-sm text-slate-500 flex gap-4 mt-1">
+                <span>{statement.totalTransactions} transactions</span>
+                <span>•</span>
+                <span>${statement.totalIncome} total</span>
+                {unpricedCount > 0 && (
+                  <>
+                    <span>•</span>
+                    <span className="text-amber-600">{unpricedCount} without price data</span>
+                  </>
+                )}
+              </div>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleExportCSV}>
