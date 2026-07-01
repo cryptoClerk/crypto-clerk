@@ -98,6 +98,7 @@ export default function StatementsPage() {
 
   const [manualAddress, setManualAddress] = useState('');
   const [useManualAddress, setUseManualAddress] = useState(false);
+  const [chain, setChain] = useState('ethereum');
 
   const fetchWallets = useCallback(async () => {
     try {
@@ -169,6 +170,7 @@ export default function StatementsPage() {
           walletAddresses: addressesToUse,
           startDate,
           endDate,
+          chain,
         }),
       });
 
@@ -348,6 +350,24 @@ export default function StatementsPage() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Chain Selection */}
+          <div className="space-y-3">
+            <Label>Blockchain</Label>
+            <Select value={chain} onValueChange={(value) => value && setChain(value)}>
+              <SelectTrigger className="w-full md:w-64">
+                <span className="capitalize">{chain}</span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ethereum">Ethereum</SelectItem>
+                <SelectItem value="polygon">Polygon</SelectItem>
+                <SelectItem value="bsc">BSC</SelectItem>
+                <SelectItem value="arbitrum">Arbitrum</SelectItem>
+                <SelectItem value="optimism">Optimism</SelectItem>
+                <SelectItem value="base">Base</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {error && <p className="text-sm text-red-500">{error}</p>}

@@ -11,7 +11,7 @@ export interface BlockchainProvider {
   getChain(): string;
 }
 
-export type SupportedChain = "ethereum" | "polygon" | "bsc" | "arbitrum" | "optimism";
+export type SupportedChain = "ethereum" | "polygon" | "bsc" | "arbitrum" | "optimism" | "base";
 
 export const SUPPORTED_CHAINS: SupportedChain[] = [
   "ethereum",
@@ -19,6 +19,7 @@ export const SUPPORTED_CHAINS: SupportedChain[] = [
   "bsc",
   "arbitrum",
   "optimism",
+  "base",
 ];
 
 export const CHAIN_NAMES: Record<string, string> = {
@@ -27,6 +28,7 @@ export const CHAIN_NAMES: Record<string, string> = {
   bsc: "BSC",
   arbitrum: "Arbitrum",
   optimism: "Optimism",
+  base: "Base",
 };
 
 export const CHAIN_IDS: Record<string, number> = {
@@ -35,6 +37,16 @@ export const CHAIN_IDS: Record<string, number> = {
   bsc: 56,
   arbitrum: 42161,
   optimism: 10,
+  base: 8453,
+};
+
+export const CHAIN_EXPLORERS: Record<string, string> = {
+  ethereum: "https://etherscan.io",
+  polygon: "https://polygonscan.com",
+  bsc: "https://bscscan.com",
+  arbitrum: "https://arbiscan.io",
+  optimism: "https://optimistic.etherscan.io",
+  base: "https://basescan.org",
 };
 
 export const CHAIN_API_KEYS: Record<string, string> = {
