@@ -80,7 +80,7 @@ export default function Home() {
                 </div>
                 <CardTitle>Invoices</CardTitle>
                 <CardDescription>
-                  Coming soon: Branded invoices with crypto payment links. Get paid in USDC, USDT, or DAI.
+                  Branded invoices with crypto payment links. Get paid in USDC, USDT, or DAI.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -228,7 +228,7 @@ export default function Home() {
             <ul className="space-y-2 text-sm">
               <li><Link href="/" className="hover:text-white">Receipts</Link></li>
               <li><Link href="/dashboard/statements" className="hover:text-white">Statements</Link></li>
-              <li><span className="text-slate-500">Invoices (Soon)</span></li>
+              <li><Link href="/dashboard/invoices" className="hover:text-white">Invoices</Link></li>
               <li><Link href="/help" className="hover:text-white">Help Docs</Link></li>
             </ul>
           </div>

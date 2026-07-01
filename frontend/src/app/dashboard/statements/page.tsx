@@ -230,6 +230,41 @@ export default function StatementsPage() {
     }, 100);
   };
 
+  const handleDownloadPDF = async () => {
+    if (!statement) return;
+
+    try {
+      const res = await fetch('/api/statements/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transactions: statement.transactions,
+          totalIncome: statement.totalIncome,
+          startDate: statement.startDate,
+          endDate: statement.endDate,
+          walletCount: statement.walletCount,
+          chain,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to generate PDF');
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `statement-${chain}-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+    } catch (err) {
+      console.error('PDF download error:', err);
+      alert('Failed to download PDF');
+    }
+  };
   const formatAddress = (addr: string) => {
     if (addr.length < 12) return addr;
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
@@ -404,8 +439,8 @@ export default function StatementsPage() {
               <Button variant="outline" onClick={handleExportCSV}>
                 Export CSV
               </Button>
-              <Button onClick={() => window.print()}>
-                Print PDF
+              <Button variant="outline" onClick={() => handleDownloadPDF()}>
+                Download PDF
               </Button>
             </div>
           </div>
