@@ -40,6 +40,11 @@ export default async function InvoiceDetailPage({ params }: Props) {
           </Button>
         </Link>
         <InvoiceStatusActions invoice={invoice} />
+        <a href={`/api/invoices/${invoice.id}/pdf`} target="_blank">
+          <Button variant="outline" size="sm">
+            Download PDF
+          </Button>
+        </a>
       </div>
 
       <Card>
