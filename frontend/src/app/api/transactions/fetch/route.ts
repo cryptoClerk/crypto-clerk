@@ -55,9 +55,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get token transfers for the recipient
-    const transfers = await provider.getTokenTransfers(tx.to);
-    const transfer = transfers.find((t) => t.txHash === validated.txHash);
+    // Get token transfers for the sender (Etherscan tokentx returns transfers where address is from OR to)
+    console.log("Fetching token transfers for sender:", tx.from);
+    const transfers = await provider.getTokenTransfers(tx.from);
+    console.log("Found transfers:", transfers.length);
+    const transfer = transfers.find((t) => t.txHash.toLowerCase() === validated.txHash.toLowerCase());
+    console.log("Matching transfer:", transfer ? "yes" : "no");
 
     if (!transfer) {
       return NextResponse.json(
