@@ -85,12 +85,6 @@ export default async function InvoiceDetailPage({ params }: Props) {
                 <span className="text-slate-500">Created:</span>{" "}
                 <span className="font-medium">{new Date(invoice.createdAt).toLocaleDateString()}</span>
               </p>
-              {invoice.paymentAddress && (
-                <p className="text-sm">
-                  <span className="text-slate-500">Payment Address:</span>{" "}
-                  <span className="font-mono text-xs">{invoice.paymentAddress}</span>
-                </p>
-              )}
             </div>
           </div>
 
@@ -137,15 +131,9 @@ export default async function InvoiceDetailPage({ params }: Props) {
               <div className="bg-blue-50 rounded-lg p-4">
                 <h3 className="font-semibold text-blue-900 mb-2">Payment Instructions</h3>
                 <p className="text-sm text-blue-800">
-                  Please send exactly {invoice.amount} {invoice.token} to the wallet address below.
+                  Please send exactly {invoice.amount} {invoice.token} to the wallet address provided by the invoice sender.
                   Once payment is confirmed, share the transaction hash to mark this invoice as paid.
                 </p>
-                {invoice.paymentAddress && (
-                  <div className="mt-3 p-3 bg-white rounded border border-blue-200">
-                    <p className="text-xs text-slate-500 mb-1">Payment Address</p>
-                    <p className="font-mono text-sm break-all">{invoice.paymentAddress}</p>
-                  </div>
-                )}
               </div>
             </div>
           )}

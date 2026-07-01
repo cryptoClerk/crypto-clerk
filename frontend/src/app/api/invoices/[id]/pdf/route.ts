@@ -219,7 +219,7 @@ export async function GET(
     );
 
     // Payment instructions if pending
-    if (invoice.status === "pending" && invoice.paymentAddress) {
+    if (invoice.status === "pending") {
       y -= 40;
       page.drawLine({
         start: { x: margin, y },
@@ -239,7 +239,7 @@ export async function GET(
 
       y -= 18;
       page.drawText(
-        `Please send exactly ${invoice.amount} ${invoice.token} to the address below:`,
+        "Please send the exact amount to the wallet address provided by the invoice sender.",
         {
           x: margin,
           y,
@@ -248,15 +248,6 @@ export async function GET(
           color: rgb(0.3, 0.3, 0.3),
         }
       );
-
-      y -= 18;
-      page.drawText(invoice.paymentAddress, {
-        x: margin,
-        y,
-        size: 9,
-        font,
-        color: rgb(0.2, 0.2, 0.7),
-      });
     }
 
     // Footer
