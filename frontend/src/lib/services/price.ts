@@ -26,7 +26,7 @@ function setCachedPrice(key: string, price: string | null, source: string) {
 const KNOWN_COINS: Record<string, string> = {
   "0x0000000000000000000000000000000000000000": "ethereum", // ETH (native)
   "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": "weth",     // WETH
-  "0xa0b86a33e6441e0a421e56e4773c3c0b5f4f0d71": "usdc",     // USDC
+  "0xa0b86a33e6441e0a421e56e4773c3c0b5f4f0d71": "usd-coin",  // USDC
   "0xdac17f958d2ee523a2206206994597c13d831ec7": "tether",    // USDT
   "0x6b175474e89094c44da98b954eedeac495271d0f": "dai",       // DAI
   "0x4fabb145d64652a948d72533023f6e7a623c7c53": "binance-usd", // BUSD
@@ -246,6 +246,8 @@ export async function batchCalculateUsdValues(
   // Group by unique (contractAddress, chain, date)
   const uniqueKeys = new Map<string, { item: typeof items[0]; indices: number[] }>();
   
+  const STABLECOINS = new Set(["USDC", "USDT", "DAI", "BUSD", "TUSD", "USDP", "FDUSD", "GUSD"]);
+  
   items.forEach((item, index) => {
     const key = `${item.contractAddress.toLowerCase()}-${item.chain.toLowerCase()}-${item.date}`;
     if (!uniqueKeys.has(key)) {
@@ -304,6 +306,16 @@ export async function batchCalculateUsdValues(
   
   // Second pass: calculate USD value for each transaction using the cached price
   for (const [key, { item, indices }] of uniqueEntries) {
+    // Stablecoins: price is always 1.00
+    if (STABLECOINS.has(item.symbol.toUpperCase())) {
+      for (const index of indices) {
+        const tx = items[index];
+        const value = (parseFloat(tx.amount) / Math.pow(10, tx.decimals)).toFixed(2);
+        results[index] = { value, isEstimated: false, source: "stablecoin" };
+      }
+      continue;
+    }
+    
     const cachedPrice = cachedResults.get(key);
     const fetchedPrice = pricePerUnit.get(key);
     const priceData = cachedPrice || fetchedPrice;
