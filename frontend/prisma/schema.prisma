@@ -73,6 +73,7 @@ model Invoice {
   dueDate         DateTime?
   status          String   @default("pending") // pending, paid, overdue, cancelled
   paymentTxHash   String?
+  paymentAddress  String?  // wallet address to receive payment
   pdfUrl          String?
   userId          String?
   user            User?    @relation(fields: [userId], references: [id])

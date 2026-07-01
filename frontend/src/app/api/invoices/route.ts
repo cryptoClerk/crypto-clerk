@@ -9,6 +9,7 @@ const invoiceSchema = z.object({
   amount: z.string().min(1),
   token: z.string().min(1),
   dueDate: z.string().optional(),
+  paymentAddress: z.string().optional(),
   userId: z.string().optional(),
 });
 
@@ -28,6 +29,7 @@ export async function POST(request: Request) {
         paymentTxHash: null,
         pdfUrl: null,
         userId: validated.userId || null,
+        paymentAddress: validated.paymentAddress || null,
       },
     });
 

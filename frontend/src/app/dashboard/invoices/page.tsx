@@ -31,6 +31,7 @@ export default function InvoicesPage() {
   const [token, setToken] = useState('USDC');
   const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [paymentAddress, setPaymentAddress] = useState('');
 
   useEffect(() => {
     fetchInvoices();
@@ -64,6 +65,7 @@ export default function InvoicesPage() {
           amount,
           token,
           dueDate,
+          paymentAddress,
         }),
       });
 
@@ -89,6 +91,7 @@ export default function InvoicesPage() {
     setToken('USDC');
     setAmount('');
     setDueDate('');
+    setPaymentAddress('');
   };
 
   const getStatusColor = (status: string) => {
@@ -180,6 +183,15 @@ export default function InvoicesPage() {
                     type="date"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-3">
+                  <Label htmlFor="paymentAddress">Payment Address (optional)</Label>
+                  <Input
+                    id="paymentAddress"
+                    value={paymentAddress}
+                    onChange={(e) => setPaymentAddress(e.target.value)}
+                    placeholder="0x... (your wallet address to receive payment)"
                   />
                 </div>
               </div>
