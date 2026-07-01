@@ -29,6 +29,14 @@ export const CHAIN_NAMES: Record<string, string> = {
   optimism: "Optimism",
 };
 
+export const CHAIN_IDS: Record<string, number> = {
+  ethereum: 1,
+  polygon: 137,
+  bsc: 56,
+  arbitrum: 42161,
+  optimism: 10,
+};
+
 export const CHAIN_API_KEYS: Record<string, string> = {
   ethereum: "ETHERSCAN_API_KEY",
   polygon: "POLYGONSCAN_API_KEY",
@@ -98,7 +106,8 @@ export class MockProvider implements BlockchainProvider {
 /**
  * ETHERSCAN PROVIDER
  *
- * Real blockchain data via Etherscan API and its variants.
+ * Real blockchain data via Etherscan API V2 (unified multichain).
+ * V2 migration: https://docs.etherscan.io/v2-migration
  */
 export class EtherscanProvider implements BlockchainProvider {
   private apiKey: string;
@@ -108,18 +117,11 @@ export class EtherscanProvider implements BlockchainProvider {
   constructor(apiKey: string, chain: string = "ethereum") {
     this.apiKey = apiKey;
     this.chain = chain;
-    this.baseUrl = this.getBaseUrl(chain);
+    this.baseUrl = "https://api.etherscan.io/v2/api";
   }
 
-  private getBaseUrl(chain: string): string {
-    const urls: Record<string, string> = {
-      ethereum: "https://api.etherscan.io/api",
-      polygon: "https://api.polygonscan.com/api",
-      bsc: "https://api.bscscan.com/api",
-      arbitrum: "https://api.arbiscan.io/api",
-      optimism: "https://api-optimistic.etherscan.io/api",
-    };
-    return urls[chain] || urls.ethereum;
+  private getChainId(): number {
+    return CHAIN_IDS[this.chain] || 1;
   }
 
   getChain(): string {
@@ -127,7 +129,8 @@ export class EtherscanProvider implements BlockchainProvider {
   }
 
   async getTransaction(hash: string): Promise<Transaction | null> {
-    const url = `${this.baseUrl}?module=proxy&action=eth_getTransactionByHash&txhash=${hash}&apikey=${this.apiKey}`;
+    const chainId = this.getChainId();
+    const url = `${this.baseUrl}?chainid=${chainId}&module=proxy&action=eth_getTransactionByHash&txhash=${hash}&apikey=${this.apiKey}`;
     const res = await fetch(url);
     const data = await res.json();
     
@@ -141,7 +144,7 @@ export class EtherscanProvider implements BlockchainProvider {
     let timestamp = "0";
     if (tx.blockNumber) {
       try {
-        const blockUrl = `${this.baseUrl}?module=proxy&action=eth_getBlockByNumber&tag=${tx.blockNumber}&boolean=true&apikey=${this.apiKey}`;
+        const blockUrl = `${this.baseUrl}?chainid=${chainId}&module=proxy&action=eth_getBlockByNumber&tag=${tx.blockNumber}&boolean=true&apikey=${this.apiKey}`;
         const blockRes = await fetch(blockUrl);
         const blockData = await blockRes.json();
         if (blockData.result && blockData.result.timestamp) {
@@ -174,7 +177,8 @@ export class EtherscanProvider implements BlockchainProvider {
   ): Promise<TokenTransfer[]> {
     const start = startBlock || 0;
     const end = endBlock || 99999999;
-    const url = `${this.baseUrl}?module=account&action=tokentx&address=${address}&startblock=${start}&endblock=${end}&sort=desc&apikey=${this.apiKey}`;
+    const chainId = this.getChainId();
+    const url = `${this.baseUrl}?chainid=${chainId}&module=account&action=tokentx&address=${address}&startblock=${start}&endblock=${end}&sort=desc&apikey=${this.apiKey}`;
     
     const res = await fetch(url);
     const data = await res.json();
@@ -199,7 +203,8 @@ export class EtherscanProvider implements BlockchainProvider {
   }
 
   async getBalance(address: string): Promise<string> {
-    const url = `${this.baseUrl}?module=account&action=balance&address=${address}&tag=latest&apikey=${this.apiKey}`;
+    const chainId = this.getChainId();
+    const url = `${this.baseUrl}?chainid=${chainId}&module=account&action=balance&address=${address}&tag=latest&apikey=${this.apiKey}`;
     const res = await fetch(url);
     const data = await res.json();
     
