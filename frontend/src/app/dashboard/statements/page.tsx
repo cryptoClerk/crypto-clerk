@@ -30,6 +30,7 @@ interface Transaction {
   amount: string;
   token: string;
   usdValue: string;
+  usdIsEstimated?: boolean;
   walletAddress: string;
 }
 

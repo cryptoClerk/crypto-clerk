@@ -16,6 +16,7 @@ interface Transaction {
   amount: string;
   token: string;
   usdValue: string;
+  usdIsEstimated?: boolean;
   walletAddress: string;
 }
 
@@ -54,14 +55,16 @@ export default function StatementPreview({
     return "All time";
   };
 
-  // Calculate running balance (reverse order for running total)
+  // Sort transactions by date (oldest first) and calculate running balance
   const sortedTxns = [...transactions].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 
   let runningBalance = 0;
   const txnsWithBalance = sortedTxns.map((t) => {
-    runningBalance += parseFloat(t.usdValue);
+    if (!t.usdIsEstimated) {
+      runningBalance += parseFloat(t.usdValue);
+    }
     return { ...t, balance: runningBalance.toFixed(2) };
   });
 
@@ -145,24 +148,44 @@ export default function StatementPreview({
                         {formatAddress(txn.from)}
                       </TableCell>
                       <TableCell className="text-sm">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${txn.usdIsEstimated ? 'bg-amber-50 text-amber-700' : 'bg-green-50 text-green-700'}`}>
                           {txn.token}
                         </span>
                       </TableCell>
                       <TableCell className="text-sm text-right font-mono">
-                        {txn.amount}
+                        {parseFloat(txn.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
                       </TableCell>
                       <TableCell className="text-sm text-right font-mono">
-                        ${parseFloat(txn.usdValue).toFixed(2)}
+                        {txn.usdIsEstimated ? (
+                          <span className="text-slate-400">—</span>
+                        ) : (
+                          `$${parseFloat(txn.usdValue).toFixed(2)}`
+                        )}
                       </TableCell>
                       <TableCell className="text-sm text-right font-mono font-medium">
-                        ${parseFloat(txn.balance).toFixed(2)}
+                        {txn.usdIsEstimated ? (
+                          <span className="text-slate-400">—</span>
+                        ) : (
+                          `$${parseFloat(txn.balance).toFixed(2)}`
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Legend */}
+          <div className="flex gap-4 text-xs text-slate-500">
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
+              Stablecoin (USD value shown)
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 rounded-full bg-amber-500" />
+              Other token (USD value not available)
+            </div>
           </div>
 
           {/* Footer Summary */}
