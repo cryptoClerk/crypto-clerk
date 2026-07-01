@@ -311,7 +311,7 @@ export default function StatementsPage() {
             <Label>Date Range</Label>
             <Select value={datePreset} onValueChange={(value) => value && setDatePreset(value)}>
               <SelectTrigger className="w-full md:w-64">
-                <SelectValue placeholder="Select date range" />
+                <span>{DATE_PRESETS.find(p => p.id === datePreset)?.name || datePreset}</span>
               </SelectTrigger>
               <SelectContent>
                 {DATE_PRESETS.map((preset) => (
