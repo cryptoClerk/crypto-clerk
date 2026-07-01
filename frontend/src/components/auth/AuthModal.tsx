@@ -42,11 +42,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { error } = await supabase!.auth.signUp({ email, password });
         if (error) throw error;
         // Show success message
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase!.auth.signInWithPassword({ email, password });
         if (error) throw error;
         onClose();
         // Refresh page to update auth state
