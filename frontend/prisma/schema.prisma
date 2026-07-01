@@ -71,12 +71,18 @@ model Invoice {
   amount          String   // store as string for precision
   token           String
   dueDate         DateTime?
-  status          String   @default("pending") // pending, paid, overdue
+  status          String   @default("pending") // pending, paid, overdue, cancelled
   paymentTxHash   String?
   pdfUrl          String?
   userId          String?
   user            User?    @relation(fields: [userId], references: [id])
   createdAt       DateTime @default(now())
+  
+  // Invoice-specific fields
+  lineItems       Json?    // [{description, quantity, rate}]
+  paymentAddress  String?  // wallet address to receive payment
+  notes           String?  // additional notes
+  chain           String?  // ethereum, polygon, etc.
 }
 
 model CoinPrice {

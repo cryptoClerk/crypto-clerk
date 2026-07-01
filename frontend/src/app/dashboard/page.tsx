@@ -42,6 +42,22 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader>
+            <CardTitle>Invoices</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-slate-600 mb-4">
+              Create professional invoices for your clients.
+            </p>
+            <Link href="/dashboard/invoices">
+              <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                Create Invoice
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>Wallets</CardTitle>
           </CardHeader>
           <CardContent>
