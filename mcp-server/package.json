@@ -8,21 +8,43 @@
   "bin": {
     "cryptoclerks-mcp": "dist/index.js"
   },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "mcp",
+    "model-context-protocol",
     "crypto",
+    "cryptoclerks",
     "freelancer",
     "receipts",
     "invoices",
-    "statements"
+    "statements",
+    "blockchain",
+    "ethereum"
   ],
   "author": "CryptoClerks",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cryptoClerk/crypto-clerk",
+    "directory": "mcp-server"
+  },
+  "bugs": {
+    "url": "https://github.com/cryptoClerk/crypto-clerk/issues"
+  },
+  "homepage": "https://crypto-clerk.onrender.com",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
     "zod": "^3.23.8"
