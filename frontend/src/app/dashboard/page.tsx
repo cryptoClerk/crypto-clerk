@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import PaymentTracker from '@/components/dashboard/PaymentTracker';
 
 interface UsageData {
   receipts: { used: number; limit: number; remaining: number };
@@ -12,12 +13,28 @@ interface UsageData {
   plan: string;
 }
 
+interface Invoice {
+  id: string;
+  invoiceNumber: string;
+  clientName: string;
+  amount: string;
+  token: string;
+  status: string;
+  paidAmount: string;
+  remainingAmount: string;
+  paymentAddress: string | null;
+  createdAt: string;
+  receipts: Array<any>;
+}
+
 export default function DashboardPage() {
   const [usage, setUsage] = useState<UsageData | null>(null);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchUsage();
+    fetchInvoices();
   }, []);
 
   const fetchUsage = async () => {
@@ -32,6 +49,18 @@ export default function DashboardPage() {
       console.error('Failed to fetch usage:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchInvoices = async () => {
+    try {
+      const res = await fetch('/api/invoices?userId=demo-user');
+      const data = await res.json();
+      if (data.success) {
+        setInvoices(data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch invoices:', err);
     }
   };
 
@@ -152,6 +181,9 @@ export default function DashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Payment Tracker */}
+      <PaymentTracker invoices={invoices} />
     </div>
   );
 }

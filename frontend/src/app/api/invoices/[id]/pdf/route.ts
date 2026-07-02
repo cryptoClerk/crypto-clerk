@@ -218,21 +218,87 @@ export async function GET(
     });
 
     y -= 18;
-    page.drawText(
-      invoice.status === "paid"
-        ? `PAID — ${invoice.paymentTxHash ? invoice.paymentTxHash.slice(0, 20) + "..." : ""}`
-        : `PENDING — Payment of ${invoice.amount} ${invoice.token} has not been received yet.`,
-      {
+    
+    if (invoice.status === "paid") {
+      page.drawText(
+        `PAID IN FULL — ${invoice.amount} ${invoice.token}`,
+        {
+          x: margin,
+          y,
+          size: 10,
+          font: fontBold,
+          color: rgb(0.2, 0.7, 0.3),
+        }
+      );
+    } else if (invoice.status === "partial") {
+      page.drawText(
+        `PARTIALLY PAID — ${invoice.paidAmount || "0"} ${invoice.token} received, ${invoice.remainingAmount || invoice.amount} ${invoice.token} remaining`,
+        {
+          x: margin,
+          y,
+          size: 10,
+          font: fontBold,
+          color: rgb(0.9, 0.7, 0.1),
+        }
+      );
+    } else if (invoice.status === "overpaid") {
+      page.drawText(
+        `OVERPAID — ${invoice.paidAmount || "0"} ${invoice.token} received (expected ${invoice.amount})`,
+        {
+          x: margin,
+          y,
+          size: 10,
+          font: fontBold,
+          color: rgb(0.2, 0.7, 0.3),
+        }
+      );
+    } else if (invoice.status === "pending") {
+      page.drawText(
+        `PENDING — Payment of ${invoice.amount} ${invoice.token} has not been received yet.`,
+        {
+          x: margin,
+          y,
+          size: 10,
+          font,
+          color: rgb(0.9, 0.7, 0.1),
+        }
+      );
+    } else {
+      page.drawText(
+        `${invoice.status.toUpperCase()}`,
+        {
+          x: margin,
+          y,
+          size: 10,
+          font,
+          color: rgb(0.9, 0.2, 0.2),
+        }
+      );
+    }
+
+    // Payment address if available
+    if (invoice.paymentAddress) {
+      y -= 30;
+      page.drawText("PAYMENT ADDRESS", {
         x: margin,
         y,
         size: 10,
+        font: fontBold,
+        color: rgb(0.5, 0.5, 0.5),
+      });
+
+      y -= 18;
+      page.drawText(invoice.paymentAddress, {
+        x: margin,
+        y,
+        size: 9,
         font,
         color: rgb(0.3, 0.3, 0.3),
-      }
-    );
+      });
+    }
 
     // Payment instructions if pending
-    if (invoice.status === "pending") {
+    if (invoice.status === "pending" || invoice.status === "partial") {
       y -= 40;
       page.drawLine({
         start: { x: margin, y },
