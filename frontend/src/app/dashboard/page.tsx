@@ -31,11 +31,13 @@ interface Invoice {
 export default function DashboardPage() {
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [analytics, setAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchUsage();
     fetchInvoices();
+    fetchAnalytics();
   }, []);
 
   const fetchUsage = async () => {
@@ -62,6 +64,18 @@ export default function DashboardPage() {
       }
     } catch (err) {
       console.error('Failed to fetch invoices:', err);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    try {
+      const res = await fetch('/api/analytics?userId=demo-user');
+      const data = await res.json();
+      if (data.success) {
+        setAnalytics(data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch analytics:', err);
     }
   };
 
@@ -187,17 +201,9 @@ export default function DashboardPage() {
       <PaymentTracker invoices={invoices} />
 
       {/* Analytics Overview */}
-      <AnalyticsDashboard
-        data={{
-          totalInvoices: invoices.length,
-          totalReceipts: invoices.reduce((sum, inv) => sum + (inv.receipts?.length || 0), 0),
-          totalPayments: invoices.filter(inv => inv.status === 'paid' || inv.status === 'partial').length,
-          totalVolume: invoices.reduce((sum, inv) => sum + parseFloat(inv.amount || '0'), 0).toFixed(2),
-          pendingInvoices: invoices.filter(inv => inv.status === 'pending').length,
-          paidInvoices: invoices.filter(inv => inv.status === 'paid' || inv.status === 'overpaid').length,
-          partialInvoices: invoices.filter(inv => inv.status === 'partial').length,
-        }}
-      />
+      {analytics && (
+        <AnalyticsDashboard data={analytics} />
+      )}
     </div>
   );
 }
