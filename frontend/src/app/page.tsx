@@ -10,10 +10,10 @@ export default function Home() {
       <div className="bg-slate-900 text-white py-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            Financial docs for freelancers paid in crypto
+            The operating system for crypto payments
           </h1>
           <p className="text-lg md:text-xl text-slate-300 mb-10 max-w-2xl mx-auto">
-            Generate professional receipts, bank-style statements, and invoices from your blockchain transactions. No more Etherscan screenshots.
+            Invoices, receipts, and statements that connect to your wallet. Auto-detect payments, generate receipts, track everything — no manual work required.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-lg px-8">
