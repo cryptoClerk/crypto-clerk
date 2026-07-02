@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 import { checkForPayments } from "@/lib/services/payment-detector";
 
 /**
@@ -19,6 +20,37 @@ export async function GET(request: Request) {
     
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check if specific invoice requested
+    const { searchParams } = new URL(request.url);
+    const invoiceId = searchParams.get("invoiceId");
+
+    if (invoiceId) {
+      // Check a specific invoice
+      const invoice = await prisma.invoice.findUnique({
+        where: { id: invoiceId },
+        include: { receipts: true },
+      });
+
+      if (!invoice) {
+        return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+      }
+
+      if (!invoice.paymentAddress) {
+        return NextResponse.json({ error: "Invoice has no payment address" }, { status: 400 });
+      }
+
+      // Import and use the payment detector for single invoice check
+      const { checkInvoiceForPayment } = await import("@/lib/services/payment-detector");
+      const result = await checkInvoiceForPayment(invoice);
+
+      return NextResponse.json({
+        success: true,
+        invoiceId,
+        ...result,
+        timestamp: new Date().toISOString(),
+      });
     }
 
     const results = await checkForPayments();

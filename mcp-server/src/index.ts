@@ -249,6 +249,47 @@ const TOOLS: Tool[] = [
       required: ["userId"],
     },
   },
+  {
+    name: "get_payment_status",
+    description: "Check the payment status of a specific invoice. Returns whether the invoice is pending, partially paid, paid in full, or overpaid. Includes payment details and linked receipts.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: {
+          type: "string",
+          description: "The invoice ID (UUID format). Example: 550e8400-e29b-41d4-a716-446655440000",
+        },
+      },
+      required: ["id"],
+    },
+  },
+  {
+    name: "watch_invoice_payment",
+    description: "Trigger a payment check for an invoice. This will poll the blockchain for token transfers to the invoice's payment address. Use this when you want to detect if a customer has paid an invoice.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        invoiceId: {
+          type: "string",
+          description: "The invoice ID to check for payments.",
+        },
+      },
+      required: ["invoiceId"],
+    },
+  },
+  {
+    name: "list_recent_payments",
+    description: "List recently detected payments across all invoices. Shows auto-generated receipts and matched invoices. Useful for reviewing recent payment activity.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        limit: {
+          type: "number",
+          description: "Maximum number of payments to return. Default: 20",
+        },
+      },
+    },
+  },
 ];
 
 // Create server
@@ -393,6 +434,29 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "get_usage": {
         const { userId } = args as { userId: string };
         result = await apiRequest("GET", `/usage?userId=${userId}`);
+        break;
+      }
+
+      case "get_payment_status": {
+        const { id } = args as { id: string };
+        result = await apiRequest("GET", `/invoices/${id}`);
+        break;
+      }
+
+      case "watch_invoice_payment": {
+        const { invoiceId } = args as { invoiceId: string };
+        // Trigger the payment watch cron job for this specific invoice
+        result = await apiRequest("GET", `/cron/payment-watch?invoiceId=${invoiceId}`);
+        break;
+      }
+
+      case "list_recent_payments": {
+        const { limit } = args as { limit?: number };
+        // Get invoices with receipts (payments) ordered by most recent
+        const queryParams = new URLSearchParams();
+        queryParams.append("status", "paid");
+        if (limit) queryParams.append("limit", limit.toString());
+        result = await apiRequest("GET", `/invoices?${queryParams.toString()}`);
         break;
       }
 
