@@ -1,6 +1,58 @@
 import { prisma } from "@/lib/db";
 
 /**
+ * Manually match a receipt to an invoice (for when auto-match is ambiguous or fails)
+ */
+export async function manualMatchReceiptToInvoice(receiptId: string, invoiceId: string): Promise<any> {
+  try {
+    const receipt = await prisma.receipt.findUnique({
+      where: { id: receiptId },
+    });
+
+    if (!receipt) {
+      throw new Error("Receipt not found");
+    }
+
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: invoiceId },
+    });
+
+    if (!invoice) {
+      throw new Error("Invoice not found");
+    }
+
+    // Link receipt to invoice
+    await prisma.receipt.update({
+      where: { id: receiptId },
+      data: { invoiceId },
+    });
+
+    // Update invoice status
+    await updateInvoiceStatus(invoiceId, receipt.amount, invoice.amount);
+
+    return { success: true, receipt, invoice };
+  } catch (error) {
+    console.error("Manual match error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Check if a payment amount matches an invoice amount within tolerance
+ * Useful for handling small rounding differences or gas fees
+ */
+export function isAmountMatch(
+  paymentAmount: number,
+  invoiceAmount: number,
+  tolerance: number = 0.01 // 1% tolerance by default
+): boolean {
+  if (invoiceAmount === 0) return false;
+  const difference = Math.abs(paymentAmount - invoiceAmount);
+  const percentageDiff = difference / invoiceAmount;
+  return percentageDiff <= tolerance;
+}
+
+/**
  * Match a receipt to the most appropriate unpaid invoice
  * Returns the matched invoice or null if no match found
  */
