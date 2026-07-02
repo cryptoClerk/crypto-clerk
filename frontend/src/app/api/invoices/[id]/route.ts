@@ -11,6 +11,7 @@ export async function GET(
     const { id } = await params;
     const invoice = await prisma.invoice.findUnique({
       where: { id },
+      include: { receipts: true },
     });
 
     if (!invoice) {
@@ -25,8 +26,10 @@ export async function GET(
 }
 
 const updateSchema = z.object({
-  status: z.enum(["pending", "paid", "overdue", "cancelled"]).optional(),
+  status: z.enum(["pending", "partial", "paid", "overpaid", "overdue", "cancelled"]).optional(),
   paymentTxHash: z.string().optional(),
+  paidAmount: z.string().optional(),
+  remainingAmount: z.string().optional(),
 });
 
 export async function PUT(
@@ -42,8 +45,9 @@ export async function PUT(
     if (validated.status) updateData.status = validated.status;
     if (validated.paymentTxHash) {
       updateData.paymentTxHash = validated.paymentTxHash;
-      updateData.status = "paid";
     }
+    if (validated.paidAmount !== undefined) updateData.paidAmount = validated.paidAmount;
+    if (validated.remainingAmount !== undefined) updateData.remainingAmount = validated.remainingAmount;
 
     const invoice = await prisma.invoice.update({
       where: { id },

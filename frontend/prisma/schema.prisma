@@ -52,6 +52,8 @@ model Receipt {
   ipAddress       String?  // For free tier tracking (until auth is implemented)
   userId          String?
   user            User?    @relation(fields: [userId], references: [id])
+  invoiceId       String?  // linked to invoice if auto-generated from payment
+  invoice         Invoice? @relation(fields: [invoiceId], references: [id])
   createdAt       DateTime @default(now())
 }
 
@@ -74,14 +76,19 @@ model Invoice {
   invoiceNumber   String   @unique
   clientName      String
   clientEmail     String?
+  paymentAddress  String?  // The wallet address where payment is expected
+  clientWallet    String?  // The wallet address we expect payment FROM (optional)
   amount          String   // store as string for precision
   token           String
   dueDate         DateTime?
-  status          String   @default("pending") // pending, paid, overdue, cancelled
+  status          String   @default("pending") // pending, partial, paid, overpaid, overdue, cancelled
+  paidAmount      String   @default("0") // running total of payments received
+  remainingAmount String   @default("0") // how much is still owed
   paymentTxHash   String?
   pdfUrl          String?
   userId          String?
   user            User?    @relation(fields: [userId], references: [id])
+  receipts        Receipt[] // linked receipts
   createdAt       DateTime @default(now())
 }
 
