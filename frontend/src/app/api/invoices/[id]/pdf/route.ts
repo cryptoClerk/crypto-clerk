@@ -24,6 +24,19 @@ export async function GET(
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
+    // Try to add logo
+    try {
+      const logoUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://crypto-clerk.onrender.com"}/logo.svg`;
+      const logoResponse = await fetch(logoUrl);
+      if (logoResponse.ok) {
+        const logoSvg = await logoResponse.text();
+        // For now, we'll draw text logo as SVG embedding is complex
+        // In production, use a PNG version for PDF embedding
+      }
+    } catch (e) {
+      // Logo not available, skip
+    }
+
     const margin = 50;
     let y = height - margin;
 
