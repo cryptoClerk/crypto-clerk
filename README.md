@@ -1,4 +1,4 @@
-# CryptoBooks
+# CryptoClerks
 
 Receipt, statement & invoice tools for freelancers paid in crypto.
 

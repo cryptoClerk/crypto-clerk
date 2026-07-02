@@ -10,7 +10,7 @@ export default function HelpPage() {
         <div className="max-w-3xl mx-auto">
           <Link href="/" className="text-blue-400 hover:text-blue-300 text-sm">← Back to home</Link>
           <h1 className="text-3xl font-bold mt-4">Help Center</h1>
-          <p className="text-slate-300 mt-2">Everything you need to know about using CryptoBooks.</p>
+          <p className="text-slate-300 mt-2">Everything you need to know about using CryptoClerks.</p>
         </div>
       </div>
 
@@ -44,7 +44,7 @@ export default function HelpPage() {
             <div>
               <h3 className="font-semibold mb-2">What is a receipt?</h3>
               <p className="text-slate-600">
-                A receipt is proof that you received a payment. In CryptoBooks, receipts are generated from
+                A receipt is proof that you received a payment. In CryptoClerks, receipts are generated from
                 blockchain transactions and include details like amount, date, sender, and a description of the work.
               </p>
             </div>
@@ -156,7 +156,7 @@ export default function HelpPage() {
               <h3 className="font-semibold mb-2">What's included in Business?</h3>
               <p className="text-slate-600">
                 Business ($49/month) includes everything in Pro plus multi-user access (up to 5 team members),
-                white-label PDFs (remove CryptoBooks branding), API access, and priority support.
+                white-label PDFs (remove CryptoClerks branding), API access, and priority support.
               </p>
             </div>
           </CardContent>
@@ -195,7 +195,7 @@ export default function HelpPage() {
               Can't find what you're looking for? Reach out and we'll help.
             </p>
             <div className="flex gap-4">
-              <a href="mailto:support@cryptobooks.app">
+              <a href="mailto:support@cryptoclerks.com">
                 <Button variant="outline">Email Support</Button>
               </a>
               <a href="https://twitter.com" target="_blank" rel="noopener noreferrer">
@@ -208,7 +208,7 @@ export default function HelpPage() {
 
       {/* Footer */}
       <div className="bg-slate-900 text-slate-400 py-8 px-4 text-center">
-        <p>© 2025 CryptoBooks. All rights reserved.</p>
+        <p>© 2025 CryptoClerks. All rights reserved.</p>
       </div>
     </div>
   );

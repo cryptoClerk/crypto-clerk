@@ -1,23 +1,23 @@
-# CryptoBooks MCP Server
+# CryptoClerks MCP Server
 
-AI agent access to CryptoBooks through the Model Context Protocol (MCP).
+AI agent access to CryptoClerks through the Model Context Protocol (MCP).
 
 ## What This Does
 
-Lets AI assistants (Claude, Cursor, etc.) use CryptoBooks tools directly — generate receipts, create invoices, track wallets, and more.
+Lets AI assistants (Claude, Cursor, etc.) use CryptoClerks tools directly — generate receipts, create invoices, track wallets, and more.
 
 ## Setup
 
 ### 1. Get an API Key
 
-1. Go to [CryptoBooks](https://crypto-clerk.onrender.com)
+1. Go to [CryptoClerks](https://crypto-clerk.onrender.com)
 2. Sign up and go to Dashboard → API Keys
 3. Generate a key (shown once — save it!)
 
 ### 2. Install
 
 ```bash
-npm install -g @cryptobooks/mcp-server
+npm install -g @cryptoclerks/mcp-server
 ```
 
 ### 3. Configure
@@ -36,9 +36,9 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 ```json
 {
   "mcpServers": {
-    "cryptobooks": {
+    "cryptoclerks": {
       "command": "npx",
-      "args": ["-y", "@cryptobooks/mcp-server"],
+      "args": ["-y", "@cryptoclerks/mcp-server"],
       "env": {
         "CRYPTOBOOKS_API_KEY": "cb_your_key_here",
         "CRYPTOBOOKS_BASE_URL": "https://crypto-clerk.onrender.com/api/v1"
@@ -50,7 +50,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 
 ### 5. Restart Claude Desktop
 
-Claude will now have access to CryptoBooks tools.
+Claude will now have access to CryptoClerks tools.
 
 ## Available Tools
 

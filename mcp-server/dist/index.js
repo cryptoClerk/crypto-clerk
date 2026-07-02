@@ -241,7 +241,7 @@ const TOOLS = [
 ];
 // Create server
 const server = new Server({
-    name: "cryptobooks",
+    name: "cryptoclerks",
     version: "1.0.0",
 }, {
     capabilities: {
@@ -375,7 +375,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function main() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error("CryptoBooks MCP Server running on stdio");
+    console.error("CryptoClerks MCP Server running on stdio");
 }
 main().catch((error) => {
     console.error("Fatal error:", error);

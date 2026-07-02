@@ -220,7 +220,7 @@ export default function Home() {
       <div className="bg-slate-900 text-slate-400 py-12 px-4">
         <div className="max-w-4xl mx-auto grid md:grid-cols-4 gap-8">
           <div>
-            <h3 className="text-white font-bold text-lg mb-4">CryptoBooks</h3>
+            <h3 className="text-white font-bold text-lg mb-4">CryptoClerks</h3>
             <p className="text-sm">Financial docs for freelancers paid in crypto.</p>
           </div>
           <div>
@@ -237,7 +237,7 @@ export default function Home() {
             <ul className="space-y-2 text-sm">
               <li><a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-white">Twitter</a></li>
               <li><a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-white">GitHub</a></li>
-              <li><a href="mailto:support@cryptobooks.app" className="hover:text-white">Contact</a></li>
+              <li><a href="mailto:support@cryptoclerks.com" className="hover:text-white">Contact</a></li>
             </ul>
           </div>
           <div>
@@ -249,7 +249,7 @@ export default function Home() {
           </div>
         </div>
         <div className="max-w-4xl mx-auto mt-8 pt-8 border-t border-slate-800 text-center text-sm">
-          <p>© 2025 CryptoBooks. All rights reserved.</p>
+          <p>© 2025 CryptoClerks. All rights reserved.</p>
         </div>
       </div>
     </div>

@@ -1,12 +1,12 @@
 {
-  "name": "@cryptobooks/mcp-server",
+  "name": "@cryptoclerks/mcp-server",
   "version": "1.0.0",
-  "description": "MCP server for CryptoBooks — AI agent access to crypto receipt, statement, and invoice tools",
+  "description": "MCP server for CryptoClerks — AI agent access to crypto receipt, statement, and invoice tools",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "cryptobooks-mcp": "dist/index.js"
+    "cryptoclerks-mcp": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -21,7 +21,7 @@
     "invoices",
     "statements"
   ],
-  "author": "CryptoBooks",
+  "author": "CryptoClerks",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",

@@ -7,7 +7,7 @@ export default function ApiDocsPage() {
     <div className="max-w-4xl mx-auto py-12 px-4">
       <h1 className="text-4xl font-bold mb-4">API Documentation</h1>
       <p className="text-slate-600 mb-8">
-        Complete API reference for CryptoBooks. AI agents and developers can access every feature programmatically.
+        Complete API reference for CryptoClerks. AI agents and developers can access every feature programmatically.
       </p>
 
       <div className="space-y-6">

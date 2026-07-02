@@ -11,7 +11,7 @@ interface EmailPayload {
 }
 
 export async function sendEmail(payload: EmailPayload): Promise<boolean> {
-  const { to, subject, html, from = "noreply@cryptobooks.app" } = payload;
+  const { to, subject, html, from = "noreply@cryptoclerks.com" } = payload;
 
   // Log email for now
   console.log("📧 EMAIL WOULD BE SENT:");
