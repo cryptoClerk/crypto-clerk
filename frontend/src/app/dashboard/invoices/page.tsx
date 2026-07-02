@@ -28,6 +28,8 @@ export default function InvoicesPage() {
   const [fetching, setFetching] = useState(true);
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
+  const [paymentAddress, setPaymentAddress] = useState('');
+  const [clientWallet, setClientWallet] = useState('');
   const [token, setToken] = useState('USDC');
   const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -61,6 +63,8 @@ export default function InvoicesPage() {
         body: JSON.stringify({
           clientName,
           clientEmail,
+          paymentAddress,
+          clientWallet,
           amount,
           token,
           dueDate,
@@ -86,6 +90,8 @@ export default function InvoicesPage() {
   const resetForm = () => {
     setClientName('');
     setClientEmail('');
+    setPaymentAddress('');
+    setClientWallet('');
     setToken('USDC');
     setAmount('');
     setDueDate('');
@@ -142,6 +148,28 @@ export default function InvoicesPage() {
                     value={clientEmail}
                     onChange={(e) => setClientEmail(e.target.value)}
                     placeholder="billing@acme.com"
+                  />
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="paymentAddress">Your Payment Address (where they pay)</Label>
+                  <Input
+                    id="paymentAddress"
+                    value={paymentAddress}
+                    onChange={(e) => setPaymentAddress(e.target.value)}
+                    placeholder="0x1234567890abcdef1234567890abcdef12345678"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="clientWallet">Client Wallet (optional, for matching)</Label>
+                  <Input
+                    id="clientWallet"
+                    value={clientWallet}
+                    onChange={(e) => setClientWallet(e.target.value)}
+                    placeholder="0xabcdef1234567890abcdef1234567890abcdef12"
                   />
                 </div>
               </div>
