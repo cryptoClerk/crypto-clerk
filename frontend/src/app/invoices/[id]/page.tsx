@@ -3,8 +3,9 @@ import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, CheckCircle, Clock, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle, Clock, XCircle, AlertCircle, Copy, Share2, ExternalLink } from "lucide-react";
 import InvoiceStatusActions from "./InvoiceStatusActions";
+import ShareInvoiceButton from "./ShareInvoiceButton";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -22,7 +23,9 @@ export default async function InvoiceDetailPage({ params }: Props) {
 
   const statusConfig = {
     pending: { color: "text-yellow-600", bg: "bg-yellow-50", icon: Clock },
+    partial: { color: "text-blue-600", bg: "bg-blue-50", icon: AlertCircle },
     paid: { color: "text-green-600", bg: "bg-green-50", icon: CheckCircle },
+    overpaid: { color: "text-green-600", bg: "bg-green-50", icon: CheckCircle },
     overdue: { color: "text-red-600", bg: "bg-red-50", icon: XCircle },
     cancelled: { color: "text-slate-600", bg: "bg-slate-50", icon: XCircle },
   };
@@ -39,12 +42,15 @@ export default async function InvoiceDetailPage({ params }: Props) {
             Back to Invoices
           </Button>
         </Link>
-        <InvoiceStatusActions invoice={invoice} />
-        <a href={`/api/invoices/${invoice.id}/pdf`} target="_blank">
-          <Button variant="outline" size="sm">
-            Download PDF
-          </Button>
-        </a>
+        <div className="flex items-center gap-2">
+          <ShareInvoiceButton invoiceId={invoice.id} />
+          <InvoiceStatusActions invoice={invoice} />
+          <a href={`/api/invoices/${invoice.id}/pdf`} target="_blank">
+            <Button variant="outline" size="sm">
+              Download PDF
+            </Button>
+          </a>
+        </div>
       </div>
 
       <Card>
@@ -123,6 +129,42 @@ export default async function InvoiceDetailPage({ params }: Props) {
                   {invoice.paymentTxHash}
                 </a>
               </p>
+            </div>
+          )}
+
+          {invoice.paymentAddress && (
+            <div className="border-t pt-6">
+              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                Payment Address
+              </h3>
+              <p className="font-mono text-sm text-slate-700 break-all">
+                {invoice.paymentAddress}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                Share the public link below to let your customer pay
+              </p>
+            </div>
+          )}
+
+          {invoice.status === "partial" && (
+            <div className="border-t pt-6">
+              <div className="bg-blue-50 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-900 mb-2">Partially Paid</h3>
+                <p className="text-sm text-blue-800">
+                  Paid: {invoice.paidAmount} {invoice.token} · Remaining: {invoice.remainingAmount} {invoice.token}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {invoice.status === "overpaid" && (
+            <div className="border-t pt-6">
+              <div className="bg-green-50 rounded-lg p-4">
+                <h3 className="font-semibold text-green-900 mb-2">Overpaid</h3>
+                <p className="text-sm text-green-800">
+                  Received: {invoice.paidAmount} {invoice.token} (expected {invoice.amount} {invoice.token})
+                </p>
+              </div>
             </div>
           )}
 
