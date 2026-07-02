@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import PaymentTracker from '@/components/dashboard/PaymentTracker';
+import AnalyticsDashboard from '@/components/dashboard/AnalyticsDashboard';
 
 interface UsageData {
   receipts: { used: number; limit: number; remaining: number };
@@ -184,6 +185,19 @@ export default function DashboardPage() {
 
       {/* Payment Tracker */}
       <PaymentTracker invoices={invoices} />
+
+      {/* Analytics Overview */}
+      <AnalyticsDashboard
+        data={{
+          totalInvoices: invoices.length,
+          totalReceipts: invoices.reduce((sum, inv) => sum + (inv.receipts?.length || 0), 0),
+          totalPayments: invoices.filter(inv => inv.status === 'paid' || inv.status === 'partial').length,
+          totalVolume: invoices.reduce((sum, inv) => sum + parseFloat(inv.amount || '0'), 0).toFixed(2),
+          pendingInvoices: invoices.filter(inv => inv.status === 'pending').length,
+          paidInvoices: invoices.filter(inv => inv.status === 'paid' || inv.status === 'overpaid').length,
+          partialInvoices: invoices.filter(inv => inv.status === 'partial').length,
+        }}
+      />
     </div>
   );
 }
